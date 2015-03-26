@@ -1,0 +1,12 @@
+# CryptoPals
+Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang:
+
+**Crypto Challenge Set 1: The basics**
+  - [x] Convert hex to base64
+  - [x] Fixed XOR
+  - [x] Single-byte XOR cipher
+  - [ ] Detect single-character XOR
+  - [ ] Implement repeating-key XOR
+  - [ ] Break repeating-key XOR
+  - [ ] AES in ECB mode
+  - [ ] Detect AES in ECB mode
