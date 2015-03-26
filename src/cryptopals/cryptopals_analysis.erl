@@ -4,8 +4,20 @@
 %%
 %% API
 %%
--export([goodness_of_fit/2]).
+-export([guess_single_byte_xor/2]).
 
+guess_single_byte_xor(BitString, Language) ->
+  Keys = lists:seq(0, 255),
+  PlainTexts = [cryptopals_bitsequence:bitstring_xor(BitString, <<Key>>) || Key <- Keys],
+  GoodnessOfFit = [goodness_of_fit(PlainText, Language) || PlainText <- PlainTexts],
+  BestFit = lists:min(GoodnessOfFit),
+  ResultTuples = lists:zip3(Keys, GoodnessOfFit, PlainTexts),
+  Winner = lists:keyfind(BestFit, 2, ResultTuples),
+  Winner.
+
+%%
+%% Internal functions
+%%
 goodness_of_fit(Text, Language) ->
   ExpectedProbabilities = letter_frequency( Language),
 
@@ -15,9 +27,6 @@ goodness_of_fit(Text, Language) ->
 
   cryptopals_statistics:hellinger(ExpectedProbabilities, ObservedProbabilities).
 
-%%
-%% Internal functions
-%%
 frequency_count(Characters) -> frequency_count(Characters, #{}).
 frequency_count(<<>>, M) -> M;
 frequency_count(<<Character:8/bitstring, Rest/bitstring>>, M) ->

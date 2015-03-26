@@ -5,7 +5,7 @@ Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang:
   - [x] Convert hex to base64
   - [x] Fixed XOR
   - [x] Single-byte XOR cipher
-  - [ ] Detect single-character XOR
+  - [x] Detect single-character XOR
   - [ ] Implement repeating-key XOR
   - [ ] Break repeating-key XOR
   - [ ] AES in ECB mode
