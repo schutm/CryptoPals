@@ -41,7 +41,7 @@ solve_challenge({Set, Challenge}) ->
         Output ->
           ok;
         ExpectedOutput ->
-          io:fwrite("  Expected output: ~s~n", [ExpectedOutput ]),
+          io:fwrite("  Expected output: ~s~n", [ExpectedOutput]),
           failed
       end
   catch

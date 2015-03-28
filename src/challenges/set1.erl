@@ -3,7 +3,7 @@
 
 -export([all/0, challenge/1]).
 
-all() -> lists:seq(1,4).
+all() -> lists:seq(1,5).
 
 challenge(1) ->
   io:fwrite("Convert hex to base64~n"),
@@ -43,7 +43,8 @@ challenge(3) ->
   Winner = cryptopals_analysis:guess_single_byte_xor(BitString, "EN"),
   {Key, _GoodnessOfFit, PlainText} = Winner,
 
-  #{input => Input, output => io_lib:format("key '~p' results in ~p", [Key, PlainText])};
+  #{input => Input,
+    output => io_lib:format("key '~p' results in ~p", [Key, PlainText])};
 
 challenge(4) ->
   io:fwrite("Detect single-character XOR~n"),
@@ -68,6 +69,19 @@ challenge(4) ->
   #{input => io_lib:format("from file '~s'", [InputFile]),
     output => io_lib:format("key '~p' results in ~p for cipher <<~s>>", [Key, PlainText, CipherText])};
 
+challenge(5) ->
+  io:fwrite("Implement repeating-key XOR~n"),
+
+  PlainText = <<"Burning 'em, if you ain't quick and nimble", 10, "I go crazy when I hear a cymbal">>,
+  Key = <<"ICE">>,
+  Expected = <<"0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f">>,
+
+  XorredBitString = cryptopals_bitsequence:bitstring_xor(PlainText, Key),
+  HexString = cryptopals_bitsequence:hex_from_bitstring(XorredBitString),
+
+  #{input => io_lib:format("~p XOR ~p", [PlainText, Key]),
+    output => HexString,
+    expectation => Expected};
 
 challenge(_) ->
   true.
