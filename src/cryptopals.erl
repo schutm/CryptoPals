@@ -41,7 +41,7 @@ solve_challenge({Set, {Title, Challenge}}) ->
 
 write_title(Set, Title) ->
   SetNumber = lists:filter(fun(C) -> C >= $0 andalso C =< $9 end, atom_to_list(Set)),
-  io:fwrite("Set ~s - challenge '~s'~n", [SetNumber, Title]).
+  io:fwrite("~nSet ~s - challenge '~s'~n", [SetNumber, Title]).
 
 write_input(#{input := Input}) ->
   io:fwrite("  Input: ~s~n", [Input]).

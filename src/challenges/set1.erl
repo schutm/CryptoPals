@@ -7,7 +7,8 @@
   fixed_xor/0,
   single_byte_xor/0,
   detect_single_character_xor/0,
-  repeating_key_xor/0]).
+  implement_repeating_key_xor/0,
+  break_repeating_key_xor/0]).
 
 all() ->
   [
@@ -15,7 +16,8 @@ all() ->
     {"Fixed XOR", fixed_xor},
     {"Single-byte XOR cipher", single_byte_xor},
     {"Detect single-character XOR", detect_single_character_xor},
-    {"Implement repeating-key XOR", repeating_key_xor}
+    {"Implement repeating-key XOR", implement_repeating_key_xor},
+    {"Break repeating-key XOR", break_repeating_key_xor}
   ].
 
 convert_hex_to_base64() ->
@@ -39,42 +41,45 @@ fixed_xor() ->
   XorredBitString = cryptopals_bitsequence:bitstring_xor(BitString2, BitString1),
   HexString = cryptopals_bitsequence:hex_from_bitstring(XorredBitString),
 
-  #{input => io_lib:format("~s XOR ~s", [Input1, Input2]),
+  #{input => io_lib:format("~p XOR ~p", [Input1, Input2]),
     output => HexString,
     expectation => Expected}.
 
 single_byte_xor() ->
   Input = <<"1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736">>,
 
-  BitString = cryptopals_bitsequence:bitstring_from_hex(Input),
-  Winner = cryptopals_analysis:guess_single_byte_xor(BitString, "EN"),
-  {Key, _GoodnessOfFit, PlainText} = Winner,
+  CipherString = cryptopals_bitsequence:bitstring_from_hex(Input),
+  {Key, _Fitness} = cryptopals_analysis:guess_single_byte_xor(CipherString, "EN"),
+  PlainText = cryptopals_bitsequence:bitstring_xor(CipherString, Key),
 
   #{input => Input,
-    output => io_lib:format("key '~p' results in ~p", [Key, PlainText])}.
+    output => io_lib:format("key ~p results in ~p", [Key, PlainText])}.
 
 detect_single_character_xor() ->
   InputFile = "./data/4.txt",
 
+  Min = fun
+    ({_, FitnessA, _} = A, {_, FitnessB, _} = _B) when FitnessA < FitnessB -> A;
+    (_A, B) -> B
+  end,
+
   {ok, Device} = file:open(InputFile, [read]),
   Guesses = cryptopals_file:map(fun(Line) ->
     HexString = list_to_bitstring(Line),
-    BitString = cryptopals_bitsequence:bitstring_from_hex(HexString),
-    Guess = cryptopals_analysis:guess_single_byte_xor(BitString, "EN"),
+    CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
+    Guess = cryptopals_analysis:guess_single_byte_xor(CipherString, "EN"),
     erlang:append_element(Guess, HexString)
   end, Device),
   file:close(Device),
-
-  Min = fun({_, FitA, _, _} = A, {_, FitB, _, _} = _B) when FitA < FitB -> A;
-    (_A, B) -> B
-  end,
   Result = lists:foldl(Min, hd(Guesses), tl(Guesses)),
-  {Key, _Fit, PlainText, CipherText} = Result,
+  {Key, _Fitness, HexString} = Result,
 
-  #{input => io_lib:format("from file '~s'", [InputFile]),
-    output => io_lib:format("key '~p' results in ~p for cipher <<~s>>", [Key, PlainText, CipherText])}.
+  CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
+  PlainText = cryptopals_bitsequence:bitstring_xor(CipherString, Key),
+  #{input => io_lib:format("from file ~p", [InputFile]),
+    output => io_lib:format("key ~p results in ~p for hexstring ~p", [Key, PlainText, HexString])}.
 
-repeating_key_xor() ->
+implement_repeating_key_xor() ->
   PlainText = <<"Burning 'em, if you ain't quick and nimble", 10, "I go crazy when I hear a cymbal">>,
   Key = <<"ICE">>,
   Expected = <<"0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f">>,
@@ -85,3 +90,16 @@ repeating_key_xor() ->
   #{input => io_lib:format("~p XOR ~p", [PlainText, Key]),
     output => HexString,
     expectation => Expected}.
+
+break_repeating_key_xor() ->
+  InputFile = "./data/6.txt",
+
+  {ok, Binary} = file:read_file(InputFile),
+  CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
+  GuessedSize = cryptopals_analysis:guess_key_size(CipherText, lists:seq(2, 40)),
+  Blocks = cryptopals_bitsequence:bitstring_unzip(CipherText, GuessedSize),
+  Key = list_to_bitstring([erlang:element(1, cryptopals_analysis:guess_single_byte_xor(Block, "EN")) || Block <- Blocks]),
+  PlainText = cryptopals_bitsequence:bitstring_xor(CipherText, Key),
+
+  #{input => io_lib:format("from file '~p'", [InputFile]),
+    output => io_lib:format("key ~p results in ~p", [Key, PlainText])}.
