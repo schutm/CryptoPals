@@ -4,7 +4,7 @@
 %%
 %% API
 %%
--export([guess_key_size/2, guess_single_byte_xor/2]).
+-export([guess_key_size/2, guess_multiple_byte_xor/2, guess_single_byte_xor/2]).
 
 guess_key_size(CipherText, Guesses) ->
   Min = fun(
@@ -24,6 +24,12 @@ guess_single_byte_xor(BitString, Language) ->
   ResultTuples = lists:zip(Keys, GoodnessOfFit),
   Winner = lists:keyfind(BestFit, 2, ResultTuples),
   Winner.
+
+guess_multiple_byte_xor(CipherText, GuessedSize) ->
+  Blocks = cryptopals_bitsequence:bitstring_unzip(CipherText, GuessedSize),
+  GuessedBytePerBlock = [erlang:element(1, cryptopals_analysis:guess_single_byte_xor(Block, "EN")) || Block <- Blocks],
+  Key = list_to_bitstring(GuessedBytePerBlock),
+  Key.
 
 %%
 %% Internal functions

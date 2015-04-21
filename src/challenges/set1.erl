@@ -58,11 +58,6 @@ single_byte_xor() ->
 detect_single_character_xor() ->
   InputFile = "./data/4.txt",
 
-  Min = fun
-    ({_, FitnessA, _} = A, {_, FitnessB, _} = _B) when FitnessA < FitnessB -> A;
-    (_A, B) -> B
-  end,
-
   {ok, Device} = file:open(InputFile, [read]),
   Guesses = cryptopals_file:map(fun(Line) ->
     HexString = list_to_bitstring(Line),
@@ -71,8 +66,7 @@ detect_single_character_xor() ->
     erlang:append_element(Guess, HexString)
   end, Device),
   file:close(Device),
-  Result = lists:foldl(Min, hd(Guesses), tl(Guesses)),
-  {Key, _Fitness, HexString} = Result,
+  {Key, _Fitness, HexString} = cryptopals_lists:min(2, Guesses),
 
   CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
   PlainText = cryptopals_bitsequence:bitstring_xor(CipherString, Key),
@@ -97,8 +91,7 @@ break_repeating_key_xor() ->
   {ok, Binary} = file:read_file(InputFile),
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
   GuessedSize = cryptopals_analysis:guess_key_size(CipherText, lists:seq(2, 40)),
-  Blocks = cryptopals_bitsequence:bitstring_unzip(CipherText, GuessedSize),
-  Key = list_to_bitstring([erlang:element(1, cryptopals_analysis:guess_single_byte_xor(Block, "EN")) || Block <- Blocks]),
+  Key = cryptopals_analysis:guess_multiple_byte_xor(CipherText, GuessedSize),
   PlainText = cryptopals_bitsequence:bitstring_xor(CipherText, Key),
 
   #{input => io_lib:format("from file '~p'", [InputFile]),
