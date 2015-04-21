@@ -8,5 +8,5 @@ Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang:
   - [x] Detect single-character XOR
   - [x] Implement repeating-key XOR
   - [x] Break repeating-key XOR
-  - [ ] AES in ECB mode
+  - [x] AES in ECB mode
   - [ ] Detect AES in ECB mode

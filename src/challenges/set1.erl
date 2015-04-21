@@ -8,7 +8,8 @@
   single_byte_xor/0,
   detect_single_character_xor/0,
   implement_repeating_key_xor/0,
-  break_repeating_key_xor/0]).
+  break_repeating_key_xor/0,
+  aes_in_ecb_mode/0]).
 
 all() ->
   [
@@ -17,7 +18,8 @@ all() ->
     {"Single-byte XOR cipher", single_byte_xor},
     {"Detect single-character XOR", detect_single_character_xor},
     {"Implement repeating-key XOR", implement_repeating_key_xor},
-    {"Break repeating-key XOR", break_repeating_key_xor}
+    {"Break repeating-key XOR", break_repeating_key_xor},
+    {"AES in ECB mode", aes_in_ecb_mode}
   ].
 
 convert_hex_to_base64() ->
@@ -96,3 +98,14 @@ break_repeating_key_xor() ->
 
   #{input => io_lib:format("from file '~p'", [InputFile]),
     output => io_lib:format("key ~p results in ~p", [Key, PlainText])}.
+
+aes_in_ecb_mode() ->
+  InputFile = "./data/7.txt",
+  Key = <<"YELLOW SUBMARINE">>,
+
+  {ok, Binary} = file:read_file(InputFile),
+  CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
+  PlainText = cryptopals_crypto:block_decrypt(aes_ecb128, Key, <<0:(bit_size(Key))>>, CipherText),
+
+  #{input => io_lib:format("from file '~p'", [InputFile]),
+    output => PlainText}.
