@@ -1,5 +1,5 @@
 # CryptoPals
-Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang:
+Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang licensed under the [ISC License](LICENSE).
 
 **Crypto Challenge Set 1: The basics**
   - [x] Convert hex to base64
