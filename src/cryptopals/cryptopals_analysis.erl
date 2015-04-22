@@ -4,7 +4,11 @@
 %%
 %% API
 %%
--export([guess_key_size/2, guess_multiple_byte_xor/2, guess_single_byte_xor/2]).
+-export([count_different_blocks/2, guess_key_size/2, guess_multiple_byte_xor/2, guess_single_byte_xor/2]).
+
+count_different_blocks(BitString, Bytes) ->
+  BlockCount = count_blocks_acc(BitString, Bytes, #{}),
+  length(maps:keys(BlockCount)).
 
 guess_key_size(CipherText, Guesses) ->
   Min = fun(
@@ -39,6 +43,13 @@ average_hamming_distance(CipherText, Bytes) ->
   HammingDistances = hamming_distances(Partitions),
   AverageDistance = lists:sum(HammingDistances) / length(HammingDistances),
   AverageDistance.
+
+count_blocks_acc(<<>>, _Bytes, Acc) ->
+  Acc;
+count_blocks_acc(BitString, Bytes, Acc) ->
+  <<Block:Bytes/bytes, Rest/bitstring>> = BitString,
+  NewBlockCount = maps:get(Block, Acc, 0) + 1,
+  count_blocks_acc(Rest, Bytes, maps:put(Block, NewBlockCount, Acc)).
 
 hamming_distances(Partitions) ->
   HammingDistances = hamming_distances_acc(Partitions, []),

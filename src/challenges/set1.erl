@@ -9,7 +9,8 @@
   detect_single_character_xor/0,
   implement_repeating_key_xor/0,
   break_repeating_key_xor/0,
-  aes_in_ecb_mode/0]).
+  aes_in_ecb_mode/0,
+  detect_aes_in_ecb_mode/0]).
 
 all() ->
   [
@@ -19,7 +20,8 @@ all() ->
     {"Detect single-character XOR", detect_single_character_xor},
     {"Implement repeating-key XOR", implement_repeating_key_xor},
     {"Break repeating-key XOR", break_repeating_key_xor},
-    {"AES in ECB mode", aes_in_ecb_mode}
+    {"AES in ECB mode", aes_in_ecb_mode},
+    {"Detect AES in ECB mode", detect_aes_in_ecb_mode}
   ].
 
 convert_hex_to_base64() ->
@@ -110,3 +112,18 @@ aes_in_ecb_mode() ->
   #{input => io_lib:format("from file '~p'", [InputFile]),
     output => PlainText}.
 
+detect_aes_in_ecb_mode() ->
+  InputFile = "./data/8.txt",
+
+  {ok, Device} = file:open(InputFile, [read]),
+  DifferentBlocks = cryptopals_file:map(fun(Line) ->
+    HexString = list_to_bitstring(Line),
+    CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
+    BlockCount = cryptopals_analysis:count_different_blocks(CipherString, 16),
+    {BlockCount, HexString}
+  end, Device),
+  file:close(Device),
+  {BlockCount, HexString} = cryptopals_lists:min(1, DifferentBlocks),
+
+  #{input => io_lib:format("from file '~p'", [InputFile]),
+    output => io_lib:format("~p different blocks found in ~p", [BlockCount, HexString])}.
