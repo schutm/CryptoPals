@@ -1,7 +1,7 @@
 -module(cryptopals).
 -author("Martin Schut <martin-github@wommm.nl>").
 
--define(AVAILABLE_SETS, [set1]).
+-define(AVAILABLE_SETS, [set1, set2]).
 
 %% API
 -export([solve/1]).
