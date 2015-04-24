@@ -1,5 +1,5 @@
 # CryptoPals
-Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang licensed under the [ISC License](LICENSE).
+Solutions to the [matasano crypto challenges](http://cryptopals.com) in [Erlang](http://erlang.org) licensed under the [ISC License](LICENSE).
 
 **Crypto Challenge Set 1: Basics**
   - [x] Convert hex to base64
@@ -13,7 +13,7 @@ Solutions to the [matasano crypto challenges](http://cryptopals.com) in Erlang l
 
 **Crypto Challenge Set 2: Block crypto**
   - [x] Implement PKCS#7 padding
-  - [ ] Implement CBC mode
+  - [x] Implement CBC mode
   - [ ] An ECB/CBC detection oracle
   - [ ] Byte-at-a-time ECB decryption (Simple)
   - [ ] ECB cut-and-paste
