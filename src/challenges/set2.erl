@@ -18,7 +18,7 @@ implement_pkcs7_padding() ->
 
   Result = cryptopals_crypto:pad(pkcs7, Input, 20),
 
-  #{input => Input,
+  #{input => io_lib:format("'~s'", [Input]),
     output => io_lib:format("'~s'", [Result]),
     expectation => Expected}.
 
