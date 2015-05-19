@@ -4,11 +4,23 @@
 %%
 %% API
 %%
--export([count_different_blocks/2, guess_key_size/2, guess_multiple_byte_xor/2, guess_single_byte_xor/2]).
+-export([
+  count_different_blocks/2,
+  detect_block_cipher_mode/1,
+  guess_key_size/2,
+  guess_multiple_byte_xor/2,
+  guess_single_byte_xor/2]).
 
 count_different_blocks(BitString, Bytes) ->
   BlockCount = count_blocks_acc(BitString, Bytes, #{}),
   length(maps:keys(BlockCount)).
+
+detect_block_cipher_mode(CipherText) ->
+  <<_:16/bytes, Block2:16/bytes, Block3:16/bytes, _/bitstring>> = CipherText,
+  case Block2 of
+    Block3 -> aes_ecb128;
+    _      -> aes_cbc128
+  end.
 
 guess_key_size(CipherText, Guesses) ->
   Min = fun(

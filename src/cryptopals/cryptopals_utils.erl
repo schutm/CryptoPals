@@ -2,10 +2,16 @@
 -author("Martin Schut <martin-github@wommm.nl>").
 
 %% API
--export([for/3]).
+-export([
+  for/3,
+  choose/1]).
 
 for(Fun, Min, Max) when is_integer(Min), is_integer(Max), Min =< Max ->
   for_acc(Fun, Min, Max, []).
+
+choose(List) ->
+  Item = random:uniform(length(List)),
+  lists:nth(Item, List).
 
 %%
 %% Internal functions

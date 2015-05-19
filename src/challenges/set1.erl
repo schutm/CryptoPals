@@ -107,7 +107,7 @@ aes_in_ecb_mode() ->
 
   {ok, Binary} = file:read_file(InputFile),
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
-  PlainText = cryptopals_crypto:block_decrypt(aes_ecb128, Key, CipherText),
+  PlainText = cryptopals_crypto:decrypt(aes_ecb128, Key, CipherText),
 
   #{input => io_lib:format("from file '~p'", [InputFile]),
     output => PlainText}.
