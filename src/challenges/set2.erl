@@ -16,13 +16,12 @@ all() ->
 
 implement_pkcs7_padding() ->
   Input = <<"YELLOW SUBMARINE">>,
-  Expected = <<"YELLOW SUBMARINE", 4, 4, 4, 4>>,
 
   Result = cryptopals_crypto:pad(pkcs7, Input, 20),
 
   #{input => io_lib:format("'~s'", [Input]),
     output => Result,
-    expectation => Expected}.
+    expectation => solutions:solution({set2, implement_pkcs7_padding})}.
 
 implement_cbc_mode() ->
   InputFile = "./data/10.txt",
@@ -34,7 +33,8 @@ implement_cbc_mode() ->
   PlainText = cryptopals_crypto:decrypt(aes_cbc128, Key, IVec, CipherText),
 
   #{input => io_lib:format("from file ~p", [InputFile]),
-    output => PlainText}.
+    output => PlainText,
+    expectation => solutions:solution({set2, implement_cbc_mode})}.
 
 an_ecb_cbc_detection_oracle() ->
   Input = <<"YELLOW SUBMARINEYELLOW SUBMARINEYELLOW SUBMARINE">>,
@@ -52,4 +52,6 @@ an_ecb_cbc_detection_oracle() ->
   CorrectGuesses = lists:foldl(fun(Element, AccIn) -> AccIn + Check(Element) end, 0, Detections),
 
   #{input => io_lib:format("Making 100 guesses", []),
-    output => io_lib:format("~p out of ~p guesses were correct", [CorrectGuesses, Guesses])}.
+    output => lists:flatten(io_lib:format("~p out of ~p guesses were correct", [CorrectGuesses, Guesses])),
+    expectation => solutions:solution({set2, an_ecb_cbc_detection_oracle})}.
+

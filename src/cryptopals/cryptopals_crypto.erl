@@ -12,7 +12,7 @@
 
 decrypt(aes_ecb128, Key, CipherText) ->
   BitSize = bit_size(Key),
-  IVec =  <<0:BitSize>>,
+  IVec = <<0:BitSize>>,
   << <<(crypto:block_decrypt(aes_cbc128, Key, IVec, CipherBlock))/bitstring>> || <<CipherBlock:BitSize/bitstring>> <= CipherText>>.
 
 encrypt(aes_ecb128, Key, PlainText) ->
