@@ -21,7 +21,8 @@ implement_pkcs7_padding() ->
 
   #{input => io_lib:format("'~s'", [Input]),
     output => Result,
-    expectation => solutions:solution({set2, implement_pkcs7_padding})}.
+    expectation => solutions:solution({set2, implement_pkcs7_padding}),
+    format => "~p"}.
 
 implement_cbc_mode() ->
   InputFile = "./data/10.txt",
@@ -34,7 +35,8 @@ implement_cbc_mode() ->
 
   #{input => io_lib:format("from file ~p", [InputFile]),
     output => PlainText,
-    expectation => solutions:solution({set2, implement_cbc_mode})}.
+    expectation => solutions:solution({set2, implement_cbc_mode}),
+    format => "~p"}.
 
 an_ecb_cbc_detection_oracle() ->
   Input = <<"YELLOW SUBMARINEYELLOW SUBMARINEYELLOW SUBMARINE">>,
@@ -52,6 +54,7 @@ an_ecb_cbc_detection_oracle() ->
   CorrectGuesses = lists:foldl(fun(Element, AccIn) -> AccIn + Check(Element) end, 0, Detections),
 
   #{input => io_lib:format("Making 100 guesses", []),
-    output => lists:flatten(io_lib:format("~p out of ~p guesses were correct", [CorrectGuesses, Guesses])),
-    expectation => solutions:solution({set2, an_ecb_cbc_detection_oracle})}.
+    output => [CorrectGuesses, Guesses],
+    expectation => solutions:solution({set2, an_ecb_cbc_detection_oracle}),
+    format => "~p out of ~p guesses were correct"}.
 

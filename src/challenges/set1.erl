@@ -32,7 +32,8 @@ convert_hex_to_base64() ->
 
   #{input => Input,
     output => Base64,
-    expectation => solutions:solution({set1, convert_hex_to_base64})}.
+    expectation => solutions:solution({set1, convert_hex_to_base64}),
+    format => "~p"}.
 
 fixed_xor() ->
   Input1 = <<"1c0111001f010100061a024b53535009181c">>,
@@ -45,7 +46,8 @@ fixed_xor() ->
 
   #{input => io_lib:format("~p XOR ~p", [Input1, Input2]),
     output => HexString,
-    expectation => solutions:solution({set1, fixed_xor})}.
+    expectation => solutions:solution({set1, fixed_xor}),
+    format => "~p"}.
 
 single_byte_xor() ->
   Input = <<"1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736">>,
@@ -55,8 +57,9 @@ single_byte_xor() ->
   PlainText = cryptopals_bitsequence:bitstring_xor(CipherString, Key),
 
   #{input => Input,
-    output => lists:flatten(io_lib:format("key ~p results in ~p", [Key, PlainText])),
-    expectation => solutions:solution({set1, single_byte_xor})}.
+    output => [Key, PlainText],
+    expectation => solutions:solution({set1, single_byte_xor}),
+    format => "key ~p results in ~p"}.
 
 detect_single_character_xor() ->
   InputFile = "./data/4.txt",
@@ -73,9 +76,10 @@ detect_single_character_xor() ->
 
   CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
   PlainText = cryptopals_bitsequence:bitstring_xor(CipherString, Key),
-  #{input => io_lib:format("from file ~p", [InputFile]),
-    output => lists:flatten(io_lib:format("key ~p results in ~p for hexstring ~p", [Key, PlainText, HexString])),
-    expectation => solutions:solution({set1, detect_single_character_xor})}.
+  #{input => io_lib:format("from file '~s'", [InputFile]),
+    output => [Key, PlainText, HexString],
+    expectation => solutions:solution({set1, detect_single_character_xor}),
+    format => "key ~p results in ~p for hexstring ~p"}.
 
 implement_repeating_key_xor() ->
   PlainText = <<"Burning 'em, if you ain't quick and nimble", 10, "I go crazy when I hear a cymbal">>,
@@ -86,7 +90,8 @@ implement_repeating_key_xor() ->
 
   #{input => io_lib:format("~p XOR ~p", [PlainText, Key]),
     output => HexString,
-    expectation => solutions:solution({set1, implement_repeating_key_xor})}.
+    expectation => solutions:solution({set1, implement_repeating_key_xor}),
+    format => "~p"}.
 
 break_repeating_key_xor() ->
   InputFile = "./data/6.txt",
@@ -97,9 +102,10 @@ break_repeating_key_xor() ->
   Key = cryptopals_analysis:guess_multiple_byte_xor(CipherText, GuessedSize),
   PlainText = cryptopals_bitsequence:bitstring_xor(CipherText, Key),
 
-  #{input => io_lib:format("from file '~p'", [InputFile]),
-    output => lists:flatten(io_lib:format("key ~p results in ~p", [Key, PlainText])),
-    expectation => solutions:solution({set1, break_repeating_key_xor})}.
+  #{input => io_lib:format("from file '~s'", [InputFile]),
+    output => [Key, PlainText],
+    expectation => solutions:solution({set1, break_repeating_key_xor}),
+    format => "key ~p results in ~p"}.
 
 aes_in_ecb_mode() ->
   InputFile = "./data/7.txt",
@@ -109,9 +115,10 @@ aes_in_ecb_mode() ->
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
   PlainText = cryptopals_crypto:decrypt(aes_ecb128, Key, CipherText),
 
-  #{input => io_lib:format("from file '~p'", [InputFile]),
+  #{input => io_lib:format("from file '~s'", [InputFile]),
     output => PlainText,
-    expectation => solutions:solution({set1, aes_in_ecb_mode})}.
+    expectation => solutions:solution({set1, aes_in_ecb_mode}),
+    format => "~p"}.
 
 detect_aes_in_ecb_mode() ->
   InputFile = "./data/8.txt",
@@ -126,6 +133,7 @@ detect_aes_in_ecb_mode() ->
   file:close(Device),
   {BlockCount, HexString} = cryptopals_lists:min(1, DifferentBlocks),
 
-  #{input => io_lib:format("from file '~p'", [InputFile]),
-    output => lists:flatten(io_lib:format("~p different blocks found in ~p", [BlockCount, HexString])),
-    expectation => solutions:solution({set1, detect_aes_in_ecb_mode})}.
+  #{input => io_lib:format("from file '~s'", [InputFile]),
+    output => [BlockCount, HexString],
+    expectation => solutions:solution({set1, detect_aes_in_ecb_mode}),
+    format => "~p different blocks found in ~p"}.

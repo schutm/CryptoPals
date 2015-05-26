@@ -46,13 +46,15 @@ write_title(Set, Title) ->
 write_input(#{input := Input}) ->
   io:fwrite("  Input: ~s~n", [Input]).
 
-write_output(#{output := Output}) ->
-  io:fwrite("  Output: ~s~n", [Output]).
+write_output(#{format := Format, output := Output}) ->
+  io:fwrite("  Output: "),
+  io:fwrite(Format, case is_list(Output) of true -> Output; _ -> [Output] end).
 
 maybe_write_expectation(#{output := Output, expectation := ExpectedOutput}) when Output =:= ExpectedOutput ->
   ok;
-maybe_write_expectation(#{expectation := ExpectedOutput}) ->
-  io:fwrite("  Expected output: ~s~n", [ExpectedOutput]);
+maybe_write_expectation(#{format := Format, expectation := ExpectedOutput}) ->
+  io:fwrite("  Expected output: "),
+  io:fwrite(Format, case is_list(ExpectedOutput) of true -> ExpectedOutput; _ -> [ExpectedOutput] end);
 maybe_write_expectation(#{}) ->
   ok.
 
