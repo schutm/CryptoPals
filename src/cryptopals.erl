@@ -32,30 +32,27 @@ solve_challenge({Set, {Title, Challenge}}) ->
 
   try Set:Challenge() of
     Result ->
-      write_input(Result),
-      write_output(Result),
-      maybe_write_expectation(Result)
+      write_result(Result),
+      maybe_write_information(Result)
   catch
     Exception:Reason -> io:fwrite("  Caught '~p' due to ~p~n", [Exception, Reason])
   end.
 
 write_title(Set, Title) ->
   SetNumber = lists:filter(fun(C) -> C >= $0 andalso C =< $9 end, atom_to_list(Set)),
-  io:fwrite("~nSet ~s - challenge '~s'~n", [SetNumber, Title]).
+  io:fwrite("Set ~s - challenge '~s': ", [SetNumber, Title]).
 
-write_input(#{input := Input}) ->
-  io:fwrite("  Input: ~s~n", [Input]).
+write_result(#{output := Output, expectation := ExpectedOutput}) when Output =:= ExpectedOutput ->
+  io:fwrite("solved~n");
+write_result(_) ->
+  io:fwrite("failed~n").
 
-write_output(#{format := Format, output := Output}) ->
-  io:fwrite("  Output: "),
-  io:fwrite(Format, case is_list(Output) of true -> Output; _ -> [Output] end).
-
-maybe_write_expectation(#{output := Output, expectation := ExpectedOutput}) when Output =:= ExpectedOutput ->
+maybe_write_information(#{input := Input, output := Output, expectation := ExpectedOutput}) when Output =/= ExpectedOutput ->
+  io:fwrite("  Input: ~s~n", [Input]),
+  io:fwrite("  Output: ~s~n", [Output]),
+  io:fwrite("  Expected output: ~s~n", [ExpectedOutput]),
   ok;
-maybe_write_expectation(#{format := Format, expectation := ExpectedOutput}) ->
-  io:fwrite("  Expected output: "),
-  io:fwrite(Format, case is_list(ExpectedOutput) of true -> ExpectedOutput; _ -> [ExpectedOutput] end);
-maybe_write_expectation(#{}) ->
+maybe_write_information(_) ->
   ok.
 
 all_challenges() ->
@@ -63,34 +60,3 @@ all_challenges() ->
 
 set_challenges(Set) ->
   [{Set, Challenge} || Challenge <- Set:all()].
-
-%% solve_challenge({Set, Challenge}) when not is_tuple(Challenge) ->
-%%   [FirstLetter|Title] = string:join(string:tokens(atom_to_list(Challenge), "_"), " "),
-%%   solve_challenge({Set, {[string:to_upper(FirstLetter)|Title], Challenge}});
-%% solve_challenge({Set, {Title, Challenge}}) ->
-%%   write_title(Set, Title),
-%%
-%%   try Set:Challenge() of
-%%     Result ->
-%%       write_result(Result),
-%%       maybe_write_information(Result)
-%%   catch
-%%     Exception:Reason -> io:fwrite("  Caught '~p' due to ~p~n", [Exception, Reason])
-%%   end.
-%%
-%% write_title(Set, Title) ->
-%%   SetNumber = lists:filter(fun(C) -> C >= $0 andalso C =< $9 end, atom_to_list(Set)),
-%%   io:fwrite("Set ~s - challenge '~s': ", [SetNumber, Title]).
-%%
-%% write_result(#{output := Output, expectation := ExpectedOutput}) when Output =:= ExpectedOutput ->
-%%   io:fwrite("solved~n");
-%% write_result(_) ->
-%%   io:fwrite("failed~n").
-%%
-%% maybe_write_information(#{input := Input, output := Output, expectation := ExpectedOutput}) when Output =/= ExpectedOutput ->
-%%   io:fwrite("  Input: ~s~n", [Input]),
-%%   io:fwrite("  Output: ~s~n", [Output]),
-%%   io:fwrite("  Expected output: ~s~n", [ExpectedOutput]),
-%%   ok;
-%% maybe_write_information(_) ->
-%%   ok.
