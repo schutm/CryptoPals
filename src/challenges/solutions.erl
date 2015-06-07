@@ -34,7 +34,12 @@ solution({set2, implement_pkcs7_padding}) ->
 solution({set2, implement_cbc_mode}) ->
   lyrics(vanilla_ice, play_that_funky_music);
 solution({set2, an_ecb_cbc_detection_oracle}) ->
-  [100, 100].
+  [100, 100];
+solution({set2, byte_at_a_time_ecb_decryption_simple}) ->
+  <<"Rollin' in my 5.0\n"
+  "With my rag-top down so my hair can blow\n"
+  "The girlies on standby waving just to say hi\n"
+  "Did you stop? No, I just drove by\n">>.
 
 lyrics(vanilla_ice, play_that_funky_music) ->
   <<"I'm back and I'm ringin' the bell \n"

@@ -47,10 +47,10 @@ write_result(#{output := Output, expectation := ExpectedOutput}) when Output =:=
 write_result(_) ->
   io:fwrite("failed~n").
 
-maybe_write_information(#{input := Input, output := Output, expectation := ExpectedOutput}) when Output =/= ExpectedOutput ->
+maybe_write_information(#{input := Input, output := Output, expectation := ExpectedOutput, format := Format}) when Output =/= ExpectedOutput ->
   io:fwrite("  Input: ~s~n", [Input]),
-  io:fwrite("  Output: ~s~n", [Output]),
-  io:fwrite("  Expected output: ~s~n", [ExpectedOutput]),
+  io:fwrite("  Output: ~s~n", [io_lib:format(Format, [Output])]),
+  io:fwrite("  Expected output: ~s~n", [io_lib:format(Format, [ExpectedOutput])]),
   ok;
 maybe_write_information(_) ->
   ok.

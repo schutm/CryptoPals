@@ -7,7 +7,8 @@
   decrypt/4,
   encrypt/3,
   encrypt/4,
-  encryption_oracle/1,
+  random_key/1,
+  random_ivec/1,
   pad/3,
   unpad/2]).
 
@@ -27,15 +28,11 @@ encrypt(aes_cbc128, Key, IVec, PlainText) ->
   PaddedPlainText = pad(pkcs7, PlainText, byte_size(Key)),
   block_encrypt(aes_cbc128, Key, IVec, PaddedPlainText).
 
-encryption_oracle(PlainText) ->
-  BitString = embed_bitstring(PlainText),
-  Key = crypto:strong_rand_bytes(16),
-  IVec = crypto:strong_rand_bytes(16),
-  Mode = cryptopals_utils:choose([aes_cbc128, aes_ecb128]),
-  case Mode of
-    aes_cbc128 -> { Mode, encrypt(aes_cbc128, Key, IVec, BitString) };
-    aes_ecb128 -> { Mode, encrypt(aes_ecb128, Key, BitString) }
-  end.
+random_key(Bytes) ->
+  crypto:strong_rand_bytes(Bytes).
+
+random_ivec(Bytes) ->
+  crypto:strong_rand_bytes(Bytes).
 
 pad(pkcs7, BitString, Bytes) ->
   ByteSize = byte_size(BitString),
@@ -87,11 +84,6 @@ block_encrypt_acc(aes_cbc128, Key, IVec, PlainText, Acc) ->
   XorredBlock = cryptopals_bitsequence:bitstring_xor(Block, IVec),
   EncryptedBlock = block_encrypt(aes_ecb128, Key, XorredBlock),
   block_encrypt_acc(aes_cbc128, Key, EncryptedBlock, Rest, <<Acc/bitstring, EncryptedBlock/bitstring>>).
-
-embed_bitstring(Bitstring) ->
-  PreBytes = crypto:strong_rand_bytes(random:uniform(6) + 4),
-  PostBytes = crypto:strong_rand_bytes(random:uniform(6) + 4),
-  <<PreBytes/bitstring, Bitstring/bitstring, PostBytes/bitstring>>.
 
 padding(NumberOfPaddingBytes) ->
   PaddingList = cryptopals_utils:for(fun(_) -> <<NumberOfPaddingBytes>> end, 1, NumberOfPaddingBytes),

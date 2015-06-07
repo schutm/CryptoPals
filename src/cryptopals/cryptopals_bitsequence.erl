@@ -8,10 +8,16 @@
 %%
 -export([
   base64_from_bitstring/1,
+  bitstring_append_random/2,
+  bitstring_prepend_random/2,
+  bitstring_within_random/2,
+  bitstring_within_random/3,
+  bitstring_copies/2,
   bitstring_from_base64/1,
   bitstring_foldl/3,
   bitstring_from_hex/1,
   bitstring_partition/2,
+  bitstring_nth_partition/3,
   bitstring_unzip/2,
   bitstring_uppercase/1,
   bitstring_xor/2,
@@ -44,8 +50,15 @@ bitstring_from_base64(Base64BitString) ->
   <<BitString:Bits/bitstring, _:OverflowBits>> = DecodedBits,
   BitString.
 
+bitstring_copies(Count, BitString) ->
+  list_to_bitstring(lists:duplicate(Count, BitString)).
+
 bitstring_foldl(Fun, BitString, Acc) ->
   bitstring_foldl_acc(Fun, BitString, Acc).
+
+bitstring_nth_partition(N, BitString, Bytes) ->
+  Partitions = bitstring_partition(BitString, Bytes),
+  lists:nth(N, Partitions).
 
 bitstring_partition(BitString, Bytes) ->
   bitstring_partition_acc(BitString, Bytes * ?BITS_PER_BYTE, []).
@@ -73,10 +86,26 @@ bitstring_from_hex(HexString) ->
   BitString = list_to_bitstring(List),
   BitString.
 
+bitstring_append_random(BitString, Range) ->
+  bitstring_within_random(BitString, Range, [0, 0]).
+
+bitstring_prepend_random(BitString, Range) ->
+  bitstring_within_random(BitString, [0, 0], Range).
+
+bitstring_within_random(BitString, Range) ->
+  bitstring_within_random(BitString, Range, Range).
+
+bitstring_within_random(BitString, RangePre, RangePost) ->
+  PreString = bitstring_random(RangePre),
+  PostString = bitstring_random(RangePost),
+  <<PreString/bitstring, BitString/bitstring, PostString/bitstring>>.
 
 %%
 %% Internal functions
 %%
+bitstring_random([Min, Max]) ->
+  crypto:strong_rand_bytes(random:uniform(Max - Min) + (Min - 1)).
+
 remove_whitespace(BitString) ->
   remove_whitespace_acc(BitString, <<>>).
 
@@ -95,7 +124,7 @@ bitstring_foldl_acc(Fun, <<Bit:1, Rest/bitstring>>, Acc) ->
 bitstring_partition_acc(BitString, Bits, Acc) ->
   case bit_size(BitString) =< Bits of
     true ->
-      [BitString|Acc];
+      lists:reverse([BitString|Acc]);
     false ->
       <<Partition:Bits/bitstring, Rest/bitstring>> = BitString,
       bitstring_partition_acc(Rest, Bits, [Partition|Acc])

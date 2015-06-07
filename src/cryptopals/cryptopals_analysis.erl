@@ -6,7 +6,11 @@
 %%
 -export([
   count_different_blocks/2,
-  detect_block_cipher_mode/1,
+  decrypt_appended_secret/4,
+  detect_block_cipher_info/1,
+  detect_block_cipher_mode/2,
+  detect_block_cipher_size/2,
+  detect_message_length/1,
   guess_key_size/2,
   guess_multiple_byte_xor/2,
   guess_single_byte_xor/2]).
@@ -15,12 +19,33 @@ count_different_blocks(BitString, Bytes) ->
   BlockCount = count_blocks_acc(BitString, Bytes, #{}),
   length(maps:keys(BlockCount)).
 
-detect_block_cipher_mode(CipherText) ->
+decrypt_appended_secret(Oracle, BlockCipherMode, BlockCipherSize, MessageLength) ->
+  decrypt_appended_block(BlockCipherMode, Oracle, BlockCipherSize, MessageLength).
+
+detect_block_cipher_info(EncryptionOracle) ->
+  Mode = detect_block_cipher_mode(oracle, EncryptionOracle),
+  BlockSize = detect_block_cipher_size(oracle, EncryptionOracle),
+  Blocks = byte_size(EncryptionOracle(<<"">>)) div BlockSize,
+  {Mode, BlockSize, Blocks}.
+
+detect_block_cipher_mode(oracle, EncryptionOracle) ->
+  PlainText = cryptopals_bitsequence:bitstring_copies(3, <<"YELLOW SUBMARINE">>),
+  CipherText = EncryptionOracle(PlainText),
+  detect_block_cipher_mode(ciphertext, CipherText);
+detect_block_cipher_mode(ciphertext, CipherText) ->
   <<_:16/bytes, Block2:16/bytes, Block3:16/bytes, _/bitstring>> = CipherText,
   case Block2 of
     Block3 -> aes_ecb128;
     _      -> aes_cbc128
   end.
+
+detect_block_cipher_size(oracle, EncryptionOracle) ->
+  {_Increment, InitialMessageSize, PaddedMessageSize} = detect_message_size_change(EncryptionOracle),
+  PaddedMessageSize - InitialMessageSize.
+
+detect_message_length(EncryptionOracle) ->
+  {Increment, InitialMessageSize, _PaddedMessageSize} = detect_message_size_change(EncryptionOracle),
+  InitialMessageSize - Increment.
 
 guess_key_size(CipherText, Guesses) ->
   Min = fun(
@@ -62,6 +87,45 @@ count_blocks_acc(BitString, Bytes, Acc) ->
   <<Block:Bytes/bytes, Rest/bitstring>> = BitString,
   NewBlockCount = maps:get(Block, Acc, 0) + 1,
   count_blocks_acc(Rest, Bytes, maps:put(Block, NewBlockCount, Acc)).
+
+decrypt_appended_block(aes_ecb128, Oracle, BlockCipherSize, UnknownLength) ->
+  decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength, 1, BlockCipherSize - 1, <<"">>).
+
+decrypt_appended_blocks_acc(aes_ecb128, _Oracle, _BlockCipherSize, 0, _Block, _BytoToDecrypt, KnownMessage) ->
+  KnownMessage;
+decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength, Block, BytoToDecrypt, KnownMessage) ->
+  Byte = decrypt_byte(Oracle, BlockCipherSize, Block, BytoToDecrypt, KnownMessage),
+
+  case BytoToDecrypt of
+    0 -> { NextBlock, NextByteToDecrypt } = { Block + 1, BlockCipherSize - 1 };
+    _ -> { NextBlock, NextByteToDecrypt } = { Block, BytoToDecrypt - 1}
+  end,
+  decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength - 1, NextBlock, NextByteToDecrypt, <<KnownMessage/bitstring, Byte>>).
+
+decrypt_byte(Oracle, BlockCipherSize, Block, BytoToDecrypt, KnownMessage) ->
+  PrefixPadding = cryptopals_bitsequence:bitstring_copies(BytoToDecrypt, <<"A">>),
+  CipherText = Oracle(PrefixPadding),
+  CipherBlock = cryptopals_bitsequence:bitstring_nth_partition(Block, CipherText, BlockCipherSize),
+  Dictionary = [{cryptopals_bitsequence:bitstring_nth_partition(Block, Oracle(<<PrefixPadding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize), Byte} || Byte <- lists:seq(0, 255)],
+  {_EncryptedBlock, Byte} = lists:keyfind(CipherBlock, 1, Dictionary),
+  Byte.
+
+encrypted_size_with_padding(EncryptionOracle, PaddingBytes) ->
+  KnownString = cryptopals_bitsequence:bitstring_copies(PaddingBytes, <<"A">>),
+  byte_size(EncryptionOracle(KnownString)).
+
+detect_message_size_change(EncryptionOracle) ->
+  InitialMessageSize = encrypted_size_with_padding(EncryptionOracle, 0),
+  Condition = fun(Result) ->
+    case Result of
+      InitialMessageSize -> false;
+      _Else -> true
+    end
+  end,
+  Incrementer = fun(Count) -> Count + 1 end,
+  {Increment, MessageSize} = cryptopals_utils:find_match(
+    fun(Count) -> encrypted_size_with_padding(EncryptionOracle, Count) end, Condition, 1, Incrementer),
+  {Increment, InitialMessageSize, MessageSize}.
 
 hamming_distances(Partitions) ->
   HammingDistances = hamming_distances_acc(Partitions, []),
