@@ -43,17 +43,7 @@ implement_cbc_mode() ->
 an_ecb_cbc_detection_oracle() ->
   Input = cryptopals_bitsequence:bitstring_copies(3, <<"YELLOW SUBMARINE">>),
   Guesses = 100,
-
-  Oracle = fun(PlainText) ->
-    BitString = cryptopals_bitsequence:bitstring_within_random(PlainText, [5, 10]),
-    Key = cryptopals_crypto:random_key(16),
-    IVec = cryptopals_crypto:random_ivec(16),
-    Mode = cryptopals_utils:choose([aes_cbc128, aes_ecb128]),
-    case Mode of
-      aes_cbc128 -> { Mode, cryptopals_crypto:encrypt(aes_cbc128, Key, IVec, BitString) };
-      aes_ecb128 -> { Mode, cryptopals_crypto:encrypt(aes_ecb128, Key, BitString) }
-    end
-  end,
+  Oracle = ecb_cbc_oracle(),
 
   Detector = fun(_) ->
     { Mode, CipherText } = Oracle(Input),
@@ -73,13 +63,7 @@ an_ecb_cbc_detection_oracle() ->
 
 byte_at_a_time_ecb_decryption_simple() ->
   Input = <<"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK">>,
-
-  Key = cryptopals_crypto:random_key(16),
-  Secret = cryptopals_bitsequence:bitstring_from_base64(Input),
-  Oracle = fun(PlainText) ->
-    BitString = <<PlainText/bitstring, Secret/bitstring>>,
-    cryptopals_crypto:encrypt(aes_ecb128, Key, BitString)
-  end,
+  Oracle = ecb_encryption_oracle(Input),
 
   {BlockCipherMode, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(Oracle),
   MessageLength = cryptopals_analysis:detect_message_length(Oracle),
@@ -89,3 +73,26 @@ byte_at_a_time_ecb_decryption_simple() ->
     output => Result,
     expectation => solutions:solution({set2, byte_at_a_time_ecb_decryption_simple}),
     format => "~p"}.
+
+%%
+%% Internal methods: oracles
+%%
+ecb_cbc_oracle() ->
+  fun(PlainText) ->
+    BitString = cryptopals_bitsequence:bitstring_within_random(PlainText, [5, 10]),
+    Key = cryptopals_crypto:random_key(16),
+    IVec = cryptopals_crypto:random_ivec(16),
+    Mode = cryptopals_utils:choose([aes_cbc128, aes_ecb128]),
+    case Mode of
+      aes_cbc128 -> {Mode, cryptopals_crypto:encrypt(aes_cbc128, Key, IVec, BitString)};
+      aes_ecb128 -> {Mode, cryptopals_crypto:encrypt(aes_ecb128, Key, BitString)}
+    end
+  end.
+
+ecb_encryption_oracle(Input) ->
+  Key = cryptopals_crypto:random_key(16),
+  Secret = cryptopals_bitsequence:bitstring_from_base64(Input),
+  fun(PlainText) ->
+    BitString = <<PlainText/bitstring, Secret/bitstring>>,
+    cryptopals_crypto:encrypt(aes_ecb128, Key, BitString)
+  end.
