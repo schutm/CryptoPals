@@ -15,8 +15,8 @@ Solutions to the [matasano crypto challenges](http://cryptopals.com) in [Erlang]
   - [x] Implement PKCS#7 padding
   - [x] Implement CBC mode
   - [x] An ECB/CBC detection oracle
-  - [ ] Byte-at-a-time ECB decryption (Simple)
-  - [ ] ECB cut-and-paste
+  - [x] Byte-at-a-time ECB decryption (Simple)
+  - [x] ECB cut-and-paste
   - [ ] Byte-at-a-time ECB decryption (Harder)
   - [ ] PKCS#7 padding validation
   - [ ] CBC bitflipping attacks

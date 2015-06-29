@@ -6,7 +6,8 @@
   ceiling/1,
   choose/1,
   find_match/4,
-  for/3]).
+  for/3,
+  parse_querystring/1]).
 
 ceiling(X) when X < 0 ->
   trunc(X);
@@ -30,6 +31,10 @@ find_match(Fun, Condition, InitialValue, Incrementer) ->
 
 for(Fun, Min, Max) when is_integer(Min), is_integer(Max), Min =< Max ->
   for_acc(Fun, Min, Max, []).
+
+parse_querystring(BitString) ->
+  KeyValuePairs = binary:split(BitString, [<<"&">>], [global, trim]),
+  lists:map(fun(KeyValue) -> erlang:list_to_tuple(binary:split(KeyValue, [<<"=">>])) end, KeyValuePairs).
 
 %%
 %% Internal functions

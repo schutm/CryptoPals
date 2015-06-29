@@ -6,14 +6,16 @@
   implement_pkcs7_padding/0,
   implement_cbc_mode/0,
   an_ecb_cbc_detection_oracle/0,
-  byte_at_a_time_ecb_decryption_simple/0]).
+  byte_at_a_time_ecb_decryption_simple/0,
+  ecb_cut_and_paste/0]).
 
 all() ->
   [
     {"Implement PKCS#7 padding", implement_pkcs7_padding},
     {"Implement CBC mode", implement_cbc_mode},
     {"An ECB/CBC detection oracle", an_ecb_cbc_detection_oracle},
-    {"Byte-at-a-time ECB decryption (Simple)", byte_at_a_time_ecb_decryption_simple}
+    {"Byte-at-a-time ECB decryption (Simple)", byte_at_a_time_ecb_decryption_simple},
+    {"ECB cut-and-paste", ecb_cut_and_paste}
   ].
 
 implement_pkcs7_padding() ->
@@ -74,6 +76,40 @@ byte_at_a_time_ecb_decryption_simple() ->
     expectation => solutions:solution({set2, byte_at_a_time_ecb_decryption_simple}),
     format => "~p"}.
 
+ecb_cut_and_paste() ->
+  Email = <<"martin-github@wommm.nl">>,
+
+  Oracle = profile_oracle(),
+  OracleInfoCallback = fun(PlainText) -> Oracle(createProfile, PlainText) end,
+  ValidEmailWithOverflow = fun({Prefix, Email, Postfix}, BlockCipherSize) ->
+    EmailLengthToOverflow = overflow({Prefix, Email, Postfix}, BlockCipherSize),
+    ValidEmailToOverflow = lengthen_email(Email, EmailLengthToOverflow),
+    {EmailLengthToOverflow, ValidEmailToOverflow}
+  end,
+
+  {_BlockCipherMode, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(OracleInfoCallback),
+  _MessageLength = cryptopals_analysis:detect_message_length(OracleInfoCallback),
+
+  {EmailLength, ValidEmailToOverflowEmail} = ValidEmailWithOverflow({<<"email=">>, Email, <<>>}, BlockCipherSize),
+  PaddedAdmin = cryptopals_crypto:pad(pkcs7, <<"admin">>, BlockCipherSize),
+  CipherWithEmailOverflow = Oracle(createProfile, <<ValidEmailToOverflowEmail/bytes, PaddedAdmin/bytes>>),
+  AdminBlock = ((byte_size(<<"email=">>) + EmailLength) div BlockCipherSize) + 1,
+  EncryptedRole = cryptopals_bitsequence:bitstring_nth_partition(AdminBlock, CipherWithEmailOverflow, BlockCipherSize),
+
+  {_EmailLength, ValidEmailToOverflowRole} = ValidEmailWithOverflow({<<"email=">>, Email, <<"&uid=10&role=">>}, BlockCipherSize),
+  CipherWithRoleOverflow = Oracle(createProfile, ValidEmailToOverflowRole),
+  CipherLengthWithoutRole = byte_size(CipherWithRoleOverflow) - BlockCipherSize,
+  <<EncryptedWithoutRole:CipherLengthWithoutRole/bytes, _Role:BlockCipherSize/bytes>>  = CipherWithRoleOverflow,
+
+  CipherWithAdminRole = << EncryptedWithoutRole/bytes, EncryptedRole/bytes >>,
+  Result = Oracle(getProfile, CipherWithAdminRole),
+
+  #{input => io_lib:format("'~s'", [Email]),
+    output => Result,
+    expectation => solutions:solution({set2, ecb_cut_and_paste}),
+    format => "~p"}.
+
+
 %%
 %% Internal methods: oracles
 %%
@@ -95,4 +131,38 @@ ecb_encryption_oracle(Input) ->
   fun(PlainText) ->
     BitString = <<PlainText/bitstring, Secret/bitstring>>,
     cryptopals_crypto:encrypt(aes_ecb128, Key, BitString)
+  end.
+
+profile_oracle() ->
+  Key = cryptopals_crypto:random_key(16),
+  fun
+    (createProfile, Email) ->
+      ProfileQueryString = profile_for(Email),
+      cryptopals_crypto:encrypt(aes_ecb128, Key, ProfileQueryString);
+    (getProfile, CipherText) ->
+      ProfileQueryString = cryptopals_crypto:decrypt(aes_ecb128, Key, CipherText),
+      cryptopals_utils:parse_querystring(ProfileQueryString)
+  end.
+
+profile_for(Email) ->
+  nomatch = binary:match(Email, [<<"%">>, <<"&">>, <<"=">>]),
+  << "email=", Email/bitstring, "&uid=10&role=user" >>.
+
+overflow({Prefix, Infix, Postfix}, BlockSize) ->
+  PrefixSize = byte_size(Prefix),
+  PostfixSize = byte_size(Postfix),
+  TotalSize = byte_size(<<Prefix/bytes, Infix/bytes, Postfix/bytes>>),
+  RequiredBlocks = cryptopals_utils:ceiling(TotalSize / BlockSize),
+  RequiredBytes = RequiredBlocks * BlockSize,
+  RequiredBytes - PrefixSize - PostfixSize.
+
+lengthen_email(Email, RequiredLength) ->
+  OneShort = RequiredLength - 1,
+  case byte_size(Email) of
+    RequiredLength -> Email;
+    OneShort       -> << Email/bytes, <<".">>/bytes >>;
+    EmailLength    ->
+      CommentLength = RequiredLength - EmailLength - 2,
+      Comment = cryptopals_bitsequence:bitstring_copies(CommentLength, <<"A">>),
+      << <<"(">>/bytes, Comment/bytes,  <<")">>/bytes, Email/bytes>>
   end.

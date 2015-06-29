@@ -111,7 +111,7 @@ remove_whitespace(BitString) ->
 
 remove_whitespace_acc(<<>>, Acc) ->
   Acc;
-remove_whitespace_acc(<<Byte:8/bitstring, Rest/bitstring>>, Acc) when Byte =:= <<10>> -> % ; Byte =:= 13; Byte =:= 32 ->
+remove_whitespace_acc(<<Byte:8/bitstring, Rest/bitstring>>, Acc) when Byte =:= <<10>> ->
   remove_whitespace_acc(Rest, Acc);
 remove_whitespace_acc(<<Byte:8/bitstring, Rest/bitstring>>, Acc) ->
   remove_whitespace_acc(Rest, <<Acc/bitstring, Byte/bitstring>>).

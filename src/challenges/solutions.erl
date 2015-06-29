@@ -39,7 +39,11 @@ solution({set2, byte_at_a_time_ecb_decryption_simple}) ->
   <<"Rollin' in my 5.0\n"
   "With my rag-top down so my hair can blow\n"
   "The girlies on standby waving just to say hi\n"
-  "Did you stop? No, I just drove by\n">>.
+  "Did you stop? No, I just drove by\n">>;
+solution({set2, ecb_cut_and_paste}) ->
+  [{<<"email">>,<<"(AAAAA)martin-github@wommm.nl">>},
+  {<<"uid">>,<<"10">>},
+  {<<"role">>,<<"admin">>}].
 
 lyrics(vanilla_ice, play_that_funky_music) ->
   <<"I'm back and I'm ringin' the bell \n"
