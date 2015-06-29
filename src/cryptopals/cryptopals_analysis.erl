@@ -29,7 +29,7 @@ detect_block_cipher_info(EncryptionOracle) ->
   {Mode, BlockSize, Blocks}.
 
 detect_block_cipher_mode(oracle, EncryptionOracle) ->
-  PlainText = cryptopals_bitsequence:bitstring_copies(3, <<"YELLOW SUBMARINE">>),
+  PlainText = cryptopals_bitsequence:copies(3, <<"YELLOW SUBMARINE">>),
   CipherText = EncryptionOracle(PlainText),
   detect_block_cipher_mode(ciphertext, CipherText);
 detect_block_cipher_mode(ciphertext, CipherText) ->
@@ -67,7 +67,7 @@ guess_single_byte_xor(BitString, Language) ->
   Winner.
 
 guess_multiple_byte_xor(CipherText, GuessedSize) ->
-  Blocks = cryptopals_bitsequence:bitstring_unzip(CipherText, GuessedSize),
+  Blocks = cryptopals_bitsequence:unzip(CipherText, GuessedSize),
   GuessedBytePerBlock = [erlang:element(1, cryptopals_analysis:guess_single_byte_xor(Block, "EN")) || Block <- Blocks],
   Key = list_to_bitstring(GuessedBytePerBlock),
   Key.
@@ -76,7 +76,7 @@ guess_multiple_byte_xor(CipherText, GuessedSize) ->
 %% Internal functions
 %%
 average_hamming_distance(CipherText, Bytes) ->
-  Partitions = cryptopals_bitsequence:bitstring_partition(CipherText, Bytes),
+  Partitions = cryptopals_bitsequence:partition(CipherText, Bytes),
   HammingDistances = hamming_distances(Partitions),
   AverageDistance = lists:sum(HammingDistances) / length(HammingDistances),
   AverageDistance.
@@ -103,15 +103,15 @@ decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength, 
   decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength - 1, NextBlock, NextByteToDecrypt, <<KnownMessage/bitstring, Byte>>).
 
 decrypt_byte(Oracle, BlockCipherSize, Block, BytoToDecrypt, KnownMessage) ->
-  PrefixPadding = cryptopals_bitsequence:bitstring_copies(BytoToDecrypt, <<"A">>),
+  PrefixPadding = cryptopals_bitsequence:copies(BytoToDecrypt, <<"A">>),
   CipherText = Oracle(PrefixPadding),
-  CipherBlock = cryptopals_bitsequence:bitstring_nth_partition(Block, CipherText, BlockCipherSize),
-  Dictionary = [{cryptopals_bitsequence:bitstring_nth_partition(Block, Oracle(<<PrefixPadding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize), Byte} || Byte <- lists:seq(0, 255)],
+  CipherBlock = cryptopals_bitsequence:nth_partition(Block, CipherText, BlockCipherSize),
+  Dictionary = [{cryptopals_bitsequence:nth_partition(Block, Oracle(<<PrefixPadding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize), Byte} || Byte <- lists:seq(0, 255)],
   {_EncryptedBlock, Byte} = lists:keyfind(CipherBlock, 1, Dictionary),
   Byte.
 
 encrypted_size_with_padding(EncryptionOracle, PaddingBytes) ->
-  KnownString = cryptopals_bitsequence:bitstring_copies(PaddingBytes, <<"A">>),
+  KnownString = cryptopals_bitsequence:copies(PaddingBytes, <<"A">>),
   byte_size(EncryptionOracle(KnownString)).
 
 detect_message_size_change(EncryptionOracle) ->
@@ -140,7 +140,7 @@ hamming_distances_acc([_LastBlock], Acc) ->
 goodness_of_fit(Text, Language) ->
   ExpectedProbabilities = letter_frequency( Language),
 
-  UpperCaseText = cryptopals_bitsequence:bitstring_uppercase(Text),
+  UpperCaseText = cryptopals_bitsequence:uppercase(Text),
   TextFrequency = frequency_count(UpperCaseText),
   ObservedProbabilities = normalize(TextFrequency),
 

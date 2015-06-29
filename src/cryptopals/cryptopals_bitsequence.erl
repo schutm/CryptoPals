@@ -7,22 +7,22 @@
 %% API
 %%
 -export([
-  base64_from_bitstring/1,
-  bitstring_append_random/2,
-  bitstring_prepend_random/2,
-  bitstring_within_random/2,
-  bitstring_within_random/3,
-  bitstring_copies/2,
   bitstring_from_base64/1,
-  bitstring_foldl/3,
   bitstring_from_hex/1,
-  bitstring_partition/2,
-  bitstring_nth_partition/3,
-  bitstring_unzip/2,
-  bitstring_uppercase/1,
+  base64_from_bitstring/1,
+  hex_from_bitstring/1,
   bitstring_xor/2,
   contains_any/2,
-  hex_from_bitstring/1]).
+  copies/2,
+  foldl/3,
+  nth_partition/3,
+  partition/2,
+  random_infix/2,
+  random_infix/3,
+  random_postfix/2,
+  random_prefix/2,
+  unzip/2,
+  uppercase/1]).
 
 base64_from_bitstring(BitString) ->
   Bytes = 3*(byte_size(BitString) div 3),
@@ -50,24 +50,24 @@ bitstring_from_base64(Base64BitString) ->
   <<BitString:Bits/bitstring, _:OverflowBits>> = DecodedBits,
   BitString.
 
-bitstring_copies(Count, BitString) ->
+copies(Count, BitString) ->
   list_to_bitstring(lists:duplicate(Count, BitString)).
 
-bitstring_foldl(Fun, BitString, Acc) ->
+foldl(Fun, BitString, Acc) ->
   bitstring_foldl_acc(Fun, BitString, Acc).
 
-bitstring_nth_partition(N, BitString, Bytes) ->
-  Partitions = bitstring_partition(BitString, Bytes),
+nth_partition(N, BitString, Bytes) ->
+  Partitions = partition(BitString, Bytes),
   lists:nth(N, Partitions).
 
-bitstring_partition(BitString, Bytes) ->
+partition(BitString, Bytes) ->
   bitstring_partition_acc(BitString, Bytes * ?BITS_PER_BYTE, []).
 
-bitstring_unzip(BitString, Partitions) ->
+unzip(BitString, Partitions) ->
   Acc = cryptopals_utils:for(fun(_I) -> <<>> end, 1, Partitions),
   bitstring_unzip_acc(BitString, 0, Acc).
 
-bitstring_uppercase(Text) ->
+uppercase(Text) ->
   bitstring_uppercase_acc(Text, <<>>).
 
 bitstring_xor(Text, Key) ->
@@ -86,16 +86,16 @@ bitstring_from_hex(HexString) ->
   BitString = list_to_bitstring(List),
   BitString.
 
-bitstring_append_random(BitString, Range) ->
-  bitstring_within_random(BitString, Range, [0, 0]).
+random_postfix(BitString, Range) ->
+  random_infix(BitString, Range, [0, 0]).
 
-bitstring_prepend_random(BitString, Range) ->
-  bitstring_within_random(BitString, [0, 0], Range).
+random_prefix(BitString, Range) ->
+  random_infix(BitString, [0, 0], Range).
 
-bitstring_within_random(BitString, Range) ->
-  bitstring_within_random(BitString, Range, Range).
+random_infix(BitString, Range) ->
+  random_infix(BitString, Range, Range).
 
-bitstring_within_random(BitString, RangePre, RangePost) ->
+random_infix(BitString, RangePre, RangePost) ->
   PreString = bitstring_random(RangePre),
   PostString = bitstring_random(RangePost),
   <<PreString/bitstring, BitString/bitstring, PostString/bitstring>>.

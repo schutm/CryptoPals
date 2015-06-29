@@ -8,7 +8,7 @@
 
 hamming(BitString1, BitString2) ->
   Bits = cryptopals_bitsequence:bitstring_xor(BitString1, BitString2),
-  HammingDistance = cryptopals_bitsequence:bitstring_foldl(fun(Bit, Acc) -> Acc + Bit end, Bits, 0),
+  HammingDistance = cryptopals_bitsequence:foldl(fun(Bit, Acc) -> Acc + Bit end, Bits, 0),
   HammingDistance.
 
 normalized_hamming(BitString1, BitString2) ->

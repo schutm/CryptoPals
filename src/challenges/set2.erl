@@ -43,7 +43,7 @@ implement_cbc_mode() ->
     format => "~p"}.
 
 an_ecb_cbc_detection_oracle() ->
-  Input = cryptopals_bitsequence:bitstring_copies(3, <<"YELLOW SUBMARINE">>),
+  Input = cryptopals_bitsequence:copies(3, <<"YELLOW SUBMARINE">>),
   Guesses = 100,
   Oracle = ecb_cbc_oracle(),
 
@@ -94,7 +94,7 @@ ecb_cut_and_paste() ->
   PaddedAdmin = cryptopals_crypto:pad(pkcs7, <<"admin">>, BlockCipherSize),
   CipherWithEmailOverflow = Oracle(createProfile, <<ValidEmailToOverflowEmail/bytes, PaddedAdmin/bytes>>),
   AdminBlock = ((byte_size(<<"email=">>) + EmailLength) div BlockCipherSize) + 1,
-  EncryptedRole = cryptopals_bitsequence:bitstring_nth_partition(AdminBlock, CipherWithEmailOverflow, BlockCipherSize),
+  EncryptedRole = cryptopals_bitsequence:nth_partition(AdminBlock, CipherWithEmailOverflow, BlockCipherSize),
 
   {_EmailLength, ValidEmailToOverflowRole} = ValidEmailWithOverflow({<<"email=">>, Email, <<"&uid=10&role=">>}, BlockCipherSize),
   CipherWithRoleOverflow = Oracle(createProfile, ValidEmailToOverflowRole),
@@ -115,7 +115,7 @@ ecb_cut_and_paste() ->
 %%
 ecb_cbc_oracle() ->
   fun(PlainText) ->
-    BitString = cryptopals_bitsequence:bitstring_within_random(PlainText, [5, 10]),
+    BitString = cryptopals_bitsequence:random_infix(PlainText, [5, 10]),
     Key = cryptopals_crypto:random_key(16),
     IVec = cryptopals_crypto:random_ivec(16),
     Mode = cryptopals_utils:choose([aes_cbc128, aes_ecb128]),
@@ -163,6 +163,6 @@ lengthen_email(Email, RequiredLength) ->
     OneShort       -> << Email/bytes, <<".">>/bytes >>;
     EmailLength    ->
       CommentLength = RequiredLength - EmailLength - 2,
-      Comment = cryptopals_bitsequence:bitstring_copies(CommentLength, <<"A">>),
+      Comment = cryptopals_bitsequence:copies(CommentLength, <<"A">>),
       << <<"(">>/bytes, Comment/bytes,  <<")">>/bytes, Email/bytes>>
   end.
