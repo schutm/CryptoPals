@@ -7,7 +7,8 @@
   implement_cbc_mode/0,
   an_ecb_cbc_detection_oracle/0,
   byte_at_a_time_ecb_decryption_simple/0,
-  ecb_cut_and_paste/0]).
+  ecb_cut_and_paste/0,
+  byte_at_a_time_ecb_decryption_harder/0]).
 
 all() ->
   [
@@ -15,7 +16,8 @@ all() ->
     {"Implement CBC mode", implement_cbc_mode},
     {"An ECB/CBC detection oracle", an_ecb_cbc_detection_oracle},
     {"Byte-at-a-time ECB decryption (Simple)", byte_at_a_time_ecb_decryption_simple},
-    {"ECB cut-and-paste", ecb_cut_and_paste}
+    {"ECB cut-and-paste", ecb_cut_and_paste},
+    {"Byte-at-a-time ECB decryption (Harder)", byte_at_a_time_ecb_decryption_harder}
   ].
 
 implement_pkcs7_padding() ->
@@ -81,27 +83,24 @@ ecb_cut_and_paste() ->
 
   Oracle = profile_oracle(),
   OracleInfoCallback = fun(PlainText) -> Oracle(createProfile, PlainText) end,
-  ValidEmailWithOverflow = fun({Prefix, Email, Postfix}, BlockCipherSize) ->
-    EmailLengthToOverflow = overflow({Prefix, Email, Postfix}, BlockCipherSize),
-    ValidEmailToOverflow = lengthen_email(Email, EmailLengthToOverflow),
-    {EmailLengthToOverflow, ValidEmailToOverflow}
-  end,
 
-  {_BlockCipherMode, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(OracleInfoCallback),
-  _MessageLength = cryptopals_analysis:detect_message_length(OracleInfoCallback),
+  {aes_ecb128, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(OracleInfoCallback),
 
-  {EmailLength, ValidEmailToOverflowEmail} = ValidEmailWithOverflow({<<"email=">>, Email, <<>>}, BlockCipherSize),
-  PaddedAdmin = cryptopals_crypto:pad(pkcs7, <<"admin">>, BlockCipherSize),
-  CipherWithEmailOverflow = Oracle(createProfile, <<ValidEmailToOverflowEmail/bytes, PaddedAdmin/bytes>>),
-  AdminBlock = ((byte_size(<<"email=">>) + EmailLength) div BlockCipherSize) + 1,
-  EncryptedRole = cryptopals_bitsequence:nth_partition(AdminBlock, CipherWithEmailOverflow, BlockCipherSize),
+  PaddedAdminBlock = cryptopals_crypto:pad(pkcs7, <<"admin">>, BlockCipherSize),
+  ValidEmailToOverflowEmail = cryptopals_analysis:overflower(
+    {<<"email=">>, Email, <<>>}, BlockCipherSize, fun cryptopals_utils:lengthen_email/2),
+  CipherTextWithOverflowAdminBlock = Oracle(createProfile, <<ValidEmailToOverflowEmail/bytes, PaddedAdminBlock/bytes>>),
+  AdminBlockPartition = byte_size(<< <<"email=">>/bytes, ValidEmailToOverflowEmail/bytes>>) div BlockCipherSize + 1,
+  PartitionsWithOverflowAdminBlock = cryptopals_bitsequence:partition(CipherTextWithOverflowAdminBlock, BlockCipherSize),
+  EncryptedRole = lists:nth(AdminBlockPartition, PartitionsWithOverflowAdminBlock),
 
-  {_EmailLength, ValidEmailToOverflowRole} = ValidEmailWithOverflow({<<"email=">>, Email, <<"&uid=10&role=">>}, BlockCipherSize),
-  CipherWithRoleOverflow = Oracle(createProfile, ValidEmailToOverflowRole),
-  CipherLengthWithoutRole = byte_size(CipherWithRoleOverflow) - BlockCipherSize,
-  <<EncryptedWithoutRole:CipherLengthWithoutRole/bytes, _Role:BlockCipherSize/bytes>>  = CipherWithRoleOverflow,
+  ValidEmailToOverflowRole = cryptopals_analysis:overflower(
+    {<<"email=">>, Email, <<"&uid=10&role=">>}, BlockCipherSize, fun cryptopals_utils:lengthen_email/2),
+  CipherTextWithOverflowRoleBlock = Oracle(createProfile, ValidEmailToOverflowRole),
+  PartitionsWithOverflowRole = cryptopals_bitsequence:partition(CipherTextWithOverflowRoleBlock, BlockCipherSize),
+  PartitionsWithoutRoleBlock = lists:droplast(PartitionsWithOverflowRole),
+  CipherWithAdminRole = cryptopals_bitsequence:concat(PartitionsWithoutRoleBlock ++ [EncryptedRole]),
 
-  CipherWithAdminRole = << EncryptedWithoutRole/bytes, EncryptedRole/bytes >>,
   Result = Oracle(getProfile, CipherWithAdminRole),
 
   #{input => io_lib:format("'~s'", [Email]),
@@ -109,6 +108,8 @@ ecb_cut_and_paste() ->
     expectation => solutions:solution({set2, ecb_cut_and_paste}),
     format => "~p"}.
 
+byte_at_a_time_ecb_decryption_harder() ->
+  1.
 
 %%
 %% Internal methods: oracles
@@ -147,22 +148,3 @@ profile_oracle() ->
 profile_for(Email) ->
   nomatch = binary:match(Email, [<<"%">>, <<"&">>, <<"=">>]),
   << "email=", Email/bitstring, "&uid=10&role=user" >>.
-
-overflow({Prefix, Infix, Postfix}, BlockSize) ->
-  PrefixSize = byte_size(Prefix),
-  PostfixSize = byte_size(Postfix),
-  TotalSize = byte_size(<<Prefix/bytes, Infix/bytes, Postfix/bytes>>),
-  RequiredBlocks = cryptopals_utils:ceiling(TotalSize / BlockSize),
-  RequiredBytes = RequiredBlocks * BlockSize,
-  RequiredBytes - PrefixSize - PostfixSize.
-
-lengthen_email(Email, RequiredLength) ->
-  OneShort = RequiredLength - 1,
-  case byte_size(Email) of
-    RequiredLength -> Email;
-    OneShort       -> << Email/bytes, <<".">>/bytes >>;
-    EmailLength    ->
-      CommentLength = RequiredLength - EmailLength - 2,
-      Comment = cryptopals_bitsequence:copies(CommentLength, <<"A">>),
-      << <<"(">>/bytes, Comment/bytes,  <<")">>/bytes, Email/bytes>>
-  end.

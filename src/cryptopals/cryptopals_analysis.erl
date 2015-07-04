@@ -13,7 +13,8 @@
   detect_message_length/1,
   guess_key_size/2,
   guess_multiple_byte_xor/2,
-  guess_single_byte_xor/2]).
+  guess_single_byte_xor/2,
+  overflower/3]).
 
 count_different_blocks(BitString, Bytes) ->
   BlockCount = count_blocks_acc(BitString, Bytes, #{}),
@@ -72,6 +73,13 @@ guess_multiple_byte_xor(CipherText, GuessedSize) ->
   Key = list_to_bitstring(GuessedBytePerBlock),
   Key.
 
+overflower({Prefix, Infix, Postfix}, BlockSize, LengtheningFun) ->
+  {PrefixSize, InfixSize, PostfixSize} = {byte_size(Prefix), byte_size(Infix), byte_size(Postfix)},
+  RequiredBlocks = cryptopals_utils:ceiling((PrefixSize + InfixSize + PostfixSize) / BlockSize),
+  RequiredBytesToOverflow = RequiredBlocks * BlockSize,
+  RequiredBytesInfix = RequiredBytesToOverflow - PrefixSize - PostfixSize,
+  LengtheningFun(Infix, RequiredBytesInfix).
+
 %%
 %% Internal functions
 %%
@@ -105,8 +113,8 @@ decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength, 
 decrypt_byte(Oracle, BlockCipherSize, Block, BytoToDecrypt, KnownMessage) ->
   PrefixPadding = cryptopals_bitsequence:copies(BytoToDecrypt, <<"A">>),
   CipherText = Oracle(PrefixPadding),
-  CipherBlock = cryptopals_bitsequence:nth_partition(Block, CipherText, BlockCipherSize),
-  Dictionary = [{cryptopals_bitsequence:nth_partition(Block, Oracle(<<PrefixPadding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize), Byte} || Byte <- lists:seq(0, 255)],
+  CipherBlock = lists:nth(Block, cryptopals_bitsequence:partition(CipherText, BlockCipherSize)),
+  Dictionary = [{lists:nth(Block, cryptopals_bitsequence:partition(Oracle(<<PrefixPadding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize)), Byte} || Byte <- lists:seq(0, 255)],
   {_EncryptedBlock, Byte} = lists:keyfind(CipherBlock, 1, Dictionary),
   Byte.
 

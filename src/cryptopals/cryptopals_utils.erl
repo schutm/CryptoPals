@@ -7,6 +7,7 @@
   choose/1,
   find_match/4,
   for/3,
+  lengthen_email/2,
   parse_querystring/1]).
 
 ceiling(X) when X < 0 ->
@@ -31,6 +32,17 @@ find_match(Fun, Condition, InitialValue, Incrementer) ->
 
 for(Fun, Min, Max) when is_integer(Min), is_integer(Max), Min =< Max ->
   for_acc(Fun, Min, Max, []).
+
+lengthen_email(Email, RequiredLength) ->
+  OneShort = RequiredLength - 1,
+  case byte_size(Email) of
+    RequiredLength -> Email;
+    OneShort       -> << Email/bytes, <<".">>/bytes >>;
+    EmailLength    ->
+      CommentLength = RequiredLength - EmailLength - 2,
+      Comment = cryptopals_bitsequence:copies(CommentLength, <<"A">>),
+      << <<"(">>/bytes, Comment/bytes,  <<")">>/bytes, Email/bytes>>
+  end.
 
 parse_querystring(BitString) ->
   KeyValuePairs = binary:split(BitString, [<<"&">>], [global, trim]),

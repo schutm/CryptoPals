@@ -12,10 +12,10 @@
   base64_from_bitstring/1,
   hex_from_bitstring/1,
   bitstring_xor/2,
+  concat/1,
   contains_any/2,
   copies/2,
   foldl/3,
-  nth_partition/3,
   partition/2,
   random_infix/2,
   random_infix/3,
@@ -50,15 +50,14 @@ bitstring_from_base64(Base64BitString) ->
   <<BitString:Bits/bitstring, _:OverflowBits>> = DecodedBits,
   BitString.
 
+concat(BitStringList) ->
+  lists:foldl(fun(BitString, Acc) -> <<Acc/bitstring, BitString/bitstring>> end, <<>>, BitStringList).
+
 copies(Count, BitString) ->
   list_to_bitstring(lists:duplicate(Count, BitString)).
 
 foldl(Fun, BitString, Acc) ->
   bitstring_foldl_acc(Fun, BitString, Acc).
-
-nth_partition(N, BitString, Bytes) ->
-  Partitions = partition(BitString, Bytes),
-  lists:nth(N, Partitions).
 
 partition(BitString, Bytes) ->
   bitstring_partition_acc(BitString, Bytes * ?BITS_PER_BYTE, []).
