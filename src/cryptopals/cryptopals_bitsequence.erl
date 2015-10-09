@@ -17,10 +17,13 @@
   copies/2,
   foldl/3,
   partition/2,
+  random_bitstring/1,
   random_infix/2,
   random_infix/3,
   random_postfix/2,
   random_prefix/2,
+  substr/2,
+  substr/3,
   unzip/2,
   uppercase/1]).
 
@@ -86,31 +89,42 @@ bitstring_from_hex(HexString) ->
   BitString.
 
 random_postfix(BitString, Range) ->
-  random_infix(BitString, Range, [0, 0]).
+  random_infix(BitString, [0, 0], Range).
 
 random_prefix(BitString, Range) ->
-  random_infix(BitString, [0, 0], Range).
+  random_infix(BitString, Range, [0, 0]).
 
 random_infix(BitString, Range) ->
   random_infix(BitString, Range, Range).
 
 random_infix(BitString, RangePre, RangePost) ->
-  PreString = bitstring_random(RangePre),
-  PostString = bitstring_random(RangePost),
+  PreString = random_bitstring(RangePre),
+  PostString = random_bitstring(RangePost),
   <<PreString/bitstring, BitString/bitstring, PostString/bitstring>>.
+
+random_bitstring([Min, Max]) when Min =:= Max ->
+  crypto:strong_rand_bytes(Min);
+random_bitstring([Min, Max]) ->
+  crypto:strong_rand_bytes(random:uniform(Max - Min) + (Min - 1)).
+
+substr(BitString, From) ->
+  PrefixLength = From - 1,
+  <<_:PrefixLength/bytes, SubString/bitstring>> = BitString,
+  SubString.
+substr(BitString, From, Length) ->
+  PrefixLength = From - 1,
+  <<_:PrefixLength/bytes, SubString:Length/bytes, _/bitstring>> = BitString,
+  SubString.
 
 %%
 %% Internal functions
 %%
-bitstring_random([Min, Max]) ->
-  crypto:strong_rand_bytes(random:uniform(Max - Min) + (Min - 1)).
-
 remove_whitespace(BitString) ->
   remove_whitespace_acc(BitString, <<>>).
 
 remove_whitespace_acc(<<>>, Acc) ->
   Acc;
-remove_whitespace_acc(<<Byte:8/bitstring, Rest/bitstring>>, Acc) when Byte =:= <<10>> ->
+remove_whitespace_acc(<<Byte:8/bitstring, Rest/bitstring>>, Acc) when Byte =:= <<10>>; Byte =:= <<13>> ->
   remove_whitespace_acc(Rest, Acc);
 remove_whitespace_acc(<<Byte:8/bitstring, Rest/bitstring>>, Acc) ->
   remove_whitespace_acc(Rest, <<Acc/bitstring, Byte/bitstring>>).

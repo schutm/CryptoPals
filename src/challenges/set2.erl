@@ -51,7 +51,7 @@ an_ecb_cbc_detection_oracle() ->
 
   Detector = fun(_) ->
     { Mode, CipherText } = Oracle(Input),
-    DetectedMode =  cryptopals_analysis:detect_block_cipher_mode(ciphertext, CipherText),
+    DetectedMode =  cryptopals_analysis:detect_block_cipher_mode(ciphertext, 16, CipherText),
     { Mode, DetectedMode }
   end,
   Detections = cryptopals_utils:for(Detector, 1, Guesses),
@@ -67,12 +67,12 @@ an_ecb_cbc_detection_oracle() ->
 
 byte_at_a_time_ecb_decryption_simple() ->
   Input = <<"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK">>,
-  Oracle = ecb_encryption_oracle(Input),
+  Oracle = ecb_encryption_oracle_simple(Input),
 
   {BlockCipherMode, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(Oracle),
   MessageLength = cryptopals_analysis:detect_message_length(Oracle),
 
-  Result = cryptopals_analysis:decrypt_appended_secret(Oracle, BlockCipherMode, BlockCipherSize, MessageLength),
+  Result = cryptopals_analysis:decrypt_appended_secret(BlockCipherMode, Oracle, BlockCipherSize, 0, MessageLength),
   #{input => io_lib:format("'~s'", [Input]),
     output => Result,
     expectation => solutions:solution({set2, byte_at_a_time_ecb_decryption_simple}),
@@ -80,10 +80,9 @@ byte_at_a_time_ecb_decryption_simple() ->
 
 ecb_cut_and_paste() ->
   Email = <<"martin-github@wommm.nl">>,
-
   Oracle = profile_oracle(),
-  OracleInfoCallback = fun(PlainText) -> Oracle(createProfile, PlainText) end,
 
+  OracleInfoCallback = fun(PlainText) -> Oracle(createProfile, PlainText) end,
   {aes_ecb128, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(OracleInfoCallback),
 
   PaddedAdminBlock = cryptopals_crypto:pad(pkcs7, <<"admin">>, BlockCipherSize),
@@ -109,7 +108,19 @@ ecb_cut_and_paste() ->
     format => "~p"}.
 
 byte_at_a_time_ecb_decryption_harder() ->
-  1.
+  Input = <<"Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK">>,
+  Oracle = ecb_encryption_oracle_harder(Input),
+
+  {BlockCipherMode, BlockCipherSize, _BlockCipherBlocks} = cryptopals_analysis:detect_block_cipher_info(Oracle),
+  PrefixLength = cryptopals_analysis:detect_prefix_length(Oracle, BlockCipherSize),
+  MessageLength = cryptopals_analysis:detect_message_length(Oracle) - PrefixLength,
+
+  Result = cryptopals_analysis:decrypt_appended_secret(BlockCipherMode, Oracle, BlockCipherSize, PrefixLength, MessageLength),
+
+  #{input => io_lib:format("'~s'", [Input]),
+    output => Result,
+    expectation => solutions:solution({set2, byte_at_a_time_ecb_decryption_harder}),
+    format => "~p"}.
 
 %%
 %% Internal methods: oracles
@@ -126,11 +137,20 @@ ecb_cbc_oracle() ->
     end
   end.
 
-ecb_encryption_oracle(Input) ->
+ecb_encryption_oracle_simple(Input) ->
   Key = cryptopals_crypto:random_key(16),
   Secret = cryptopals_bitsequence:bitstring_from_base64(Input),
   fun(PlainText) ->
     BitString = <<PlainText/bitstring, Secret/bitstring>>,
+    cryptopals_crypto:encrypt(aes_ecb128, Key, BitString)
+  end.
+
+ecb_encryption_oracle_harder(Input) ->
+  Key = cryptopals_crypto:random_key(16),
+  Prefix = cryptopals_bitsequence:random_bitstring([40, 40]),
+  Secret = cryptopals_bitsequence:bitstring_from_base64(Input),
+  fun(PlainText) ->
+    BitString = <<Prefix/bitstring, PlainText/bitstring, Secret/bitstring>>,
     cryptopals_crypto:encrypt(aes_ecb128, Key, BitString)
   end.
 

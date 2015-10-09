@@ -6,11 +6,12 @@
 %%
 -export([
   count_different_blocks/2,
-  decrypt_appended_secret/4,
+  decrypt_appended_secret/5,
   detect_block_cipher_info/1,
-  detect_block_cipher_mode/2,
+  detect_block_cipher_mode/3,
   detect_block_cipher_size/2,
   detect_message_length/1,
+  detect_prefix_length/2,
   guess_key_size/2,
   guess_multiple_byte_xor/2,
   guess_single_byte_xor/2,
@@ -20,24 +21,32 @@ count_different_blocks(BitString, Bytes) ->
   BlockCount = count_blocks_acc(BitString, Bytes, #{}),
   length(maps:keys(BlockCount)).
 
-decrypt_appended_secret(Oracle, BlockCipherMode, BlockCipherSize, MessageLength) ->
-  decrypt_appended_block(BlockCipherMode, Oracle, BlockCipherSize, MessageLength).
+decrypt_appended_secret(BlockCipherMode, Oracle, BlockCipherSize, PrefixLength, MessageLength) ->
+   decrypt_appended_block(BlockCipherMode, Oracle, BlockCipherSize, PrefixLength, MessageLength).
 
 detect_block_cipher_info(EncryptionOracle) ->
-  Mode = detect_block_cipher_mode(oracle, EncryptionOracle),
-  BlockSize = detect_block_cipher_size(oracle, EncryptionOracle),
-  Blocks = byte_size(EncryptionOracle(<<"">>)) div BlockSize,
-  {Mode, BlockSize, Blocks}.
+  BlockSizeInBytes = detect_block_cipher_size(oracle, EncryptionOracle),
+  Mode = detect_block_cipher_mode(oracle, BlockSizeInBytes, EncryptionOracle),
+  Blocks = byte_size(EncryptionOracle(<<"">>)) div BlockSizeInBytes,
+  {Mode, BlockSizeInBytes, Blocks}.
 
-detect_block_cipher_mode(oracle, EncryptionOracle) ->
-  PlainText = cryptopals_bitsequence:copies(3, <<"YELLOW SUBMARINE">>),
+detect_block_cipher_mode(oracle, BlockSizeInBytes, EncryptionOracle) ->
+  SingleBlockPlainText = cryptopals_bitsequence:copies(BlockSizeInBytes, <<"Y">>),
+  PlainText = cryptopals_bitsequence:copies(3, SingleBlockPlainText),
   CipherText = EncryptionOracle(PlainText),
-  detect_block_cipher_mode(ciphertext, CipherText);
-detect_block_cipher_mode(ciphertext, CipherText) ->
-  <<_:16/bytes, Block2:16/bytes, Block3:16/bytes, _/bitstring>> = CipherText,
-  case Block2 of
-    Block3 -> aes_ecb128;
-    _      -> aes_cbc128
+  detect_block_cipher_mode(ciphertext, BlockSizeInBytes, CipherText);
+detect_block_cipher_mode(ciphertext, BlockSizeInBytes, CipherText) ->
+  case has_two_consecutive_blocks(BlockSizeInBytes, CipherText) of
+    true -> aes_ecb128;
+    _ -> aes_cbc128
+  end.
+
+has_two_consecutive_blocks(BlockSizeInBytes, CipherText) ->
+  <<Block1:BlockSizeInBytes/bytes, Block2:BlockSizeInBytes/bytes, Rest/bitstring>> = CipherText,
+  if
+    Block1 =:= Block2 -> true;
+    Rest =:= <<>> -> false;
+    true -> has_two_consecutive_blocks(BlockSizeInBytes, <<Block2/bitstring, Rest/bitstring>>)
   end.
 
 detect_block_cipher_size(oracle, EncryptionOracle) ->
@@ -47,6 +56,29 @@ detect_block_cipher_size(oracle, EncryptionOracle) ->
 detect_message_length(EncryptionOracle) ->
   {Increment, InitialMessageSize, _PaddedMessageSize} = detect_message_size_change(EncryptionOracle),
   InitialMessageSize - Increment.
+
+detect_prefix_length(EncryptionOracle, BlockCipherSize) ->
+  CipherText1 = EncryptionOracle(<<"">>),
+  CipherText2 = EncryptionOracle(<<"$">>),
+  BlockAlignedCommonPrefixSize = binary:longest_common_prefix([CipherText1, CipherText2]) div BlockCipherSize * BlockCipherSize,
+  Incrementer = fun(Count) -> Count + 1 end,
+
+  Fun = fun(Count) when Count =< BlockCipherSize ->
+    PlainText = cryptopals_bitsequence:copies(2 * BlockCipherSize + Count, <<"$">>),
+    EncryptionOracle(PlainText)
+  end,
+  Condition = fun(CipherText) ->
+    CipherSubBitString = cryptopals_bitsequence:substr(CipherText, BlockAlignedCommonPrefixSize + 1, 3 * BlockCipherSize),
+    Partitions = cryptopals_bitsequence:partition(CipherSubBitString, BlockCipherSize),
+    case Partitions of
+      [P, P, _] -> true;
+      [_, P, P] -> true;
+      _         -> false
+    end
+  end,
+
+  {Increment, _CipherText} = cryptopals_utils:find_match(Fun, Condition, 1, Incrementer),
+  BlockAlignedCommonPrefixSize + BlockCipherSize - Increment.
 
 guess_key_size(CipherText, Guesses) ->
   Min = fun(
@@ -96,27 +128,38 @@ count_blocks_acc(BitString, Bytes, Acc) ->
   NewBlockCount = maps:get(Block, Acc, 0) + 1,
   count_blocks_acc(Rest, Bytes, maps:put(Block, NewBlockCount, Acc)).
 
-decrypt_appended_block(aes_ecb128, Oracle, BlockCipherSize, UnknownLength) ->
-  decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength, 1, BlockCipherSize - 1, <<"">>).
+decrypt_appended_block(aes_ecb128, Oracle, BlockCipherSize, PrefixLength, UnknownLength) ->
+   decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, PrefixLength, UnknownLength, 1, BlockCipherSize - 1, <<"">>).
 
-decrypt_appended_blocks_acc(aes_ecb128, _Oracle, _BlockCipherSize, 0, _Block, _BytoToDecrypt, KnownMessage) ->
+decrypt_appended_blocks_acc(aes_ecb128, _Oracle, _BlockCipherSize, _PrefixLength, _UnknownLength = 0, _Block, _BytoToDecrypt, KnownMessage) ->
   KnownMessage;
-decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength, Block, BytoToDecrypt, KnownMessage) ->
-  Byte = decrypt_byte(Oracle, BlockCipherSize, Block, BytoToDecrypt, KnownMessage),
+decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, PrefixLength, UnknownLength, Block, BytoToDecrypt, KnownMessage) ->
+  Byte = decrypt_byte(Oracle, BlockCipherSize, PrefixLength, Block, BytoToDecrypt, KnownMessage),
 
   case BytoToDecrypt of
     0 -> { NextBlock, NextByteToDecrypt } = { Block + 1, BlockCipherSize - 1 };
     _ -> { NextBlock, NextByteToDecrypt } = { Block, BytoToDecrypt - 1}
   end,
-  decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, UnknownLength - 1, NextBlock, NextByteToDecrypt, <<KnownMessage/bitstring, Byte>>).
+  decrypt_appended_blocks_acc(aes_ecb128, Oracle, BlockCipherSize, PrefixLength, UnknownLength - 1, NextBlock, NextByteToDecrypt, <<KnownMessage/bitstring, Byte>>).
 
-decrypt_byte(Oracle, BlockCipherSize, Block, BytoToDecrypt, KnownMessage) ->
-  PrefixPadding = cryptopals_bitsequence:copies(BytoToDecrypt, <<"A">>),
-  CipherText = Oracle(PrefixPadding),
-  CipherBlock = lists:nth(Block, cryptopals_bitsequence:partition(CipherText, BlockCipherSize)),
-  Dictionary = [{lists:nth(Block, cryptopals_bitsequence:partition(Oracle(<<PrefixPadding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize)), Byte} || Byte <- lists:seq(0, 255)],
+decrypt_byte(Oracle, BlockCipherSize, PrefixLength, BlockToDecrypt, ByteToDecrypt, KnownMessage) ->
+  Padding = padding(BlockCipherSize, PrefixLength, ByteToDecrypt),
+  BlocksToSkip = (PrefixLength + byte_size(Padding)) div BlockCipherSize,
+  CipherBlockToDecrypt = BlocksToSkip + BlockToDecrypt,
+  CipherBlock = block(CipherBlockToDecrypt, Oracle(Padding), BlockCipherSize),
+  Dictionary = [{block(CipherBlockToDecrypt, Oracle(<<Padding/bitstring, KnownMessage/bitstring, Byte>>), BlockCipherSize), Byte} || Byte <- lists:seq(0, 255)],
   {_EncryptedBlock, Byte} = lists:keyfind(CipherBlock, 1, Dictionary),
   Byte.
+
+block(CipherBlockToDecrypt, CipherText, BlockCipherSize) ->
+  lists:nth(CipherBlockToDecrypt, cryptopals_bitsequence:partition(CipherText, BlockCipherSize)).
+
+padding(BlockCipherSize, PrefixLength, MessaageBlockByte) ->
+  PrefixPartialBlockLength = PrefixLength rem BlockCipherSize,
+  PrefixPaddingLength = (BlockCipherSize - PrefixPartialBlockLength) rem BlockCipherSize,
+  PrefixPadding = cryptopals_bitsequence:copies(PrefixPaddingLength, <<"A">>),
+  OverflowPadding = cryptopals_bitsequence:copies(MessaageBlockByte, <<"B">>),
+  <<PrefixPadding/bitstring, OverflowPadding/bitstring>>.
 
 encrypted_size_with_padding(EncryptionOracle, PaddingBytes) ->
   KnownString = cryptopals_bitsequence:copies(PaddingBytes, <<"A">>),
