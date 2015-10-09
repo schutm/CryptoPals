@@ -31,11 +31,11 @@ implement_pkcs7_padding() ->
     format => "~p"}.
 
 implement_cbc_mode() ->
-  InputFile = "./data/10.txt",
+  InputFile = "10.txt",
   Key = <<"YELLOW SUBMARINE">>,
   IVec = <<0:(16 * 8)>>,
 
-  {ok, Binary} = file:read_file(InputFile),
+  {ok, Binary} = cryptopals_utils:read_data(InputFile),
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
   PlainText = cryptopals_crypto:decrypt(aes_cbc128, Key, IVec, CipherText),
 
