@@ -8,9 +8,6 @@
   find_match/4,
   for/3,
   lengthen_email/2,
-  read_data/1,
-  open_file/2,
-  close_file/1,
   parse_querystring/1]).
 
 ceiling(X) when X < 0 ->
@@ -47,17 +44,6 @@ lengthen_email(Email, RequiredLength) ->
       << <<"(">>/bytes, Comment/bytes,  <<")">>/bytes, Email/bytes>>
   end.
 
-open_file(FileName, Mode) ->
-  Path = prefix_with_privdir(FileName),
-  file:open(Path, Mode).
-
-close_file(Device) ->
-  file:close(Device).
-
-read_data(FileName) ->
-  Path = prefix_with_privdir(FileName),
-  file:read_file(Path).
-
 parse_querystring(BitString) ->
   KeyValuePairs = binary:split(BitString, [<<"&">>], [global, trim]),
   lists:map(fun(KeyValue) -> erlang:list_to_tuple(binary:split(KeyValue, [<<"=">>])) end, KeyValuePairs).
@@ -69,7 +55,3 @@ for_acc(Fun, Max, Max, Acc) ->
   lists:reverse([Fun(Max)|Acc]);
 for_acc(Fun, I, Max, Acc) ->
   for_acc(Fun, I+1, Max, [Fun(I)|Acc]).
-
-prefix_with_privdir(FileName) ->
-  PrivDir = code:priv_dir(cryptopals),
-  filename:join(PrivDir, FileName).

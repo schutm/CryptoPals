@@ -64,14 +64,14 @@ single_byte_xor() ->
 detect_single_character_xor() ->
   InputFile = "4.txt",
 
-  {ok, Device} = cryptopals_utils:open_file(InputFile, [read]),
+  {ok, Device} = cryptopals_file:open(InputFile, [read]),
   Guesses = cryptopals_file:map(fun(Line) ->
     HexString = list_to_bitstring(Line),
     CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
     Guess = cryptopals_analysis:guess_single_byte_xor(CipherString, "EN"),
     erlang:append_element(Guess, HexString)
   end, Device),
-  cryptopals_utils:close_file(Device),
+  cryptopals_file:close(Device),
   {Key, _Fitness, HexString} = cryptopals_lists:min(2, Guesses),
 
   CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
@@ -96,7 +96,7 @@ implement_repeating_key_xor() ->
 break_repeating_key_xor() ->
   InputFile = "6.txt",
 
-  {ok, Binary} = cryptopals_utils:read_data(InputFile),
+  {ok, Binary} = cryptopals_file:read(InputFile),
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
   GuessedSize = cryptopals_analysis:guess_key_size(CipherText, lists:seq(2, 40)),
   Key = cryptopals_analysis:guess_multiple_byte_xor(CipherText, GuessedSize),
@@ -111,7 +111,7 @@ aes_in_ecb_mode() ->
   InputFile = "7.txt",
   Key = <<"YELLOW SUBMARINE">>,
 
-  {ok, Binary} = cryptopals_utils:read_data(InputFile),
+  {ok, Binary} = cryptopals_file:read(InputFile),
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
   PlainText = cryptopals_crypto:decrypt(aes_ecb128, Key, CipherText),
 
@@ -123,14 +123,14 @@ aes_in_ecb_mode() ->
 detect_aes_in_ecb_mode() ->
   InputFile = "8.txt",
 
-  {ok, Device} = cryptopals_utils:open_file(InputFile, [read]),
+  {ok, Device} = cryptopals_file:open(InputFile, [read]),
   DifferentBlocks = cryptopals_file:map(fun(Line) ->
     HexString = list_to_bitstring(Line),
     CipherString = cryptopals_bitsequence:bitstring_from_hex(HexString),
     BlockCount = cryptopals_analysis:count_different_blocks(CipherString, 16),
     {BlockCount, HexString}
   end, Device),
-  cryptopals_utils:close_file(Device),
+  cryptopals_file:close(Device),
   {BlockCount, HexString} = cryptopals_lists:min(1, DifferentBlocks),
 
   #{input => io_lib:format("from file '~s'", [InputFile]),

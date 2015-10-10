@@ -35,7 +35,7 @@ implement_cbc_mode() ->
   Key = <<"YELLOW SUBMARINE">>,
   IVec = <<0:(16 * 8)>>,
 
-  {ok, Binary} = cryptopals_utils:read_data(InputFile),
+  {ok, Binary} = cryptopals_file:read(InputFile),
   CipherText = cryptopals_bitsequence:bitstring_from_base64(Binary),
   PlainText = cryptopals_crypto:decrypt(aes_cbc128, Key, IVec, CipherText),
 
