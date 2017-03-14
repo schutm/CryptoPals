@@ -1,3 +1,7 @@
+Canonical source
+================
+The canonical source of CryptoPals is hosted on [gitlab.com](https://gitlab.com/schutm/CryptoPals).
+
 # CryptoPals
 Solutions to the [matasano crypto challenges](http://cryptopals.com) in [Erlang](http://erlang.org) licensed under the [ISC License](LICENSE).
 
